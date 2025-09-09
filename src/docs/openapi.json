@@ -1,0 +1,602 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"title": "Muabantainguyen API",
+		"version": "0.1.0",
+		"description": "API documentation for auth and password reset"
+	},
+	"servers": [{ "url": "http://localhost:4000" }],
+	"paths": {
+		"/api/resources": {
+			"get": {
+				"summary": "List purchased resources (auto-deleted after 30 days)",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer" } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer" } }
+				],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/payments/start": {
+			"post": {
+				"summary": "Start Sepay payment for existing order",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"orderId": { "type": "string", "format": "uuid" },
+									"amount": { "type": "number" }
+								},
+								"required": ["orderId", "amount"]
+							}
+						}
+					}
+				},
+				"responses": { "201": { "description": "Created" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/payments/checkout": {
+			"post": {
+				"summary": "Checkout cart and create Sepay payment",
+				"security": [{ "bearerAuth": [] }],
+				"responses": {
+					"201": { "description": "Created" },
+					"400": { "description": "Bad request" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/payments/webhook/sepay": {
+			"post": {
+				"summary": "Sepay webhook receiver",
+				"responses": {
+					"200": { "description": "OK" },
+					"400": { "description": "Bad request" },
+					"401": { "description": "Invalid signature" }
+				}
+			}
+		},
+		"/api/admin/users": {
+			"get": {
+				"summary": "Admin: list users",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer" } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer" } }
+				],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/admin/users/{id}/block": {
+			"put": {
+				"summary": "Admin: block/unblock user",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "blocked": { "type": "boolean" } },
+								"required": ["blocked"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/admin/users/{id}/orders": {
+			"get": {
+				"summary": "Admin: get user orders",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/admin/products": {
+			"post": {
+				"summary": "Admin: create product",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"slug": { "type": "string" },
+									"description": { "type": "string" },
+									"price": { "type": "number" },
+									"stock": { "type": "integer" },
+									"imageUrl": { "type": "string" },
+									"categoryId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["name", "slug", "price"]
+							}
+						}
+					}
+				},
+				"responses": { "201": { "description": "Created" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/admin/products/{id}": {
+			"put": {
+				"summary": "Admin: update product",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			},
+			"delete": {
+				"summary": "Admin: delete product",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/admin/vouchers": {
+			"get": {
+				"summary": "Admin: list vouchers",
+				"security": [{ "bearerAuth": [] }],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			},
+			"post": {
+				"summary": "Admin: create voucher",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"code": { "type": "string" },
+									"description": { "type": "string" },
+									"discount_percent": { "type": "integer" },
+									"discount_amount": { "type": "number" },
+									"max_uses": { "type": "integer" },
+									"valid_from": { "type": "string", "format": "date-time" },
+									"valid_to": { "type": "string", "format": "date-time" },
+									"is_active": { "type": "boolean" }
+								},
+								"required": ["code"]
+							}
+						}
+					}
+				},
+				"responses": { "201": { "description": "Created" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/admin/vouchers/{id}": {
+			"put": {
+				"summary": "Admin: update voucher",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			},
+			"delete": {
+				"summary": "Admin: delete voucher",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/admin/categories": {
+			"post": {
+				"summary": "Admin: create category (supports parentId)",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"slug": { "type": "string" },
+									"parentId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["name", "slug"]
+							}
+						}
+					}
+				},
+				"responses": { "201": { "description": "Created" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/admin/categories/{id}": {
+			"put": {
+				"summary": "Admin: update category",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			},
+			"delete": {
+				"summary": "Admin: delete category",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/admin/categories/tree": {
+			"get": {
+				"summary": "Admin: get category tree",
+				"security": [{ "bearerAuth": [] }],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/public/categories/tree": {
+			"get": {
+				"summary": "Public: get category tree",
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/cart": {
+			"get": {
+				"summary": "Get current user's cart",
+				"security": [{ "bearerAuth": [] }],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/cart/add": {
+			"post": {
+				"summary": "Add item to cart",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"productId": { "type": "string", "format": "uuid" },
+									"quantity": { "type": "integer", "minimum": 1 }
+								},
+								"required": ["productId", "quantity"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "OK" },
+					"400": { "description": "Bad request" },
+					"404": { "description": "Not found" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/cart/update": {
+			"put": {
+				"summary": "Update item quantity",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"productId": { "type": "string", "format": "uuid" },
+									"quantity": { "type": "integer", "minimum": 1 }
+								},
+								"required": ["productId", "quantity"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/cart/remove": {
+			"post": {
+				"summary": "Remove item from cart",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "productId": { "type": "string", "format": "uuid" } },
+								"required": ["productId"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/cart/clear": {
+			"post": {
+				"summary": "Clear the cart",
+				"security": [{ "bearerAuth": [] }],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/orders/checkout": {
+			"post": {
+				"summary": "Checkout current cart into an order",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": false,
+					"content": {
+						"application/json": {
+							"schema": { "type": "object", "properties": { "paymentMethod": { "type": "string" } } }
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Created" },
+					"400": { "description": "Bad request" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/orders": {
+			"get": {
+				"summary": "List user's orders",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } }
+				],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/orders/{id}": {
+			"get": {
+				"summary": "Get order detail",
+				"security": [{ "bearerAuth": [] }],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"404": { "description": "Not found" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/products/categories": {
+			"get": {
+				"summary": "List categories",
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/products": {
+			"get": {
+				"summary": "List products with filters",
+				"parameters": [
+					{ "name": "q", "in": "query", "schema": { "type": "string" } },
+					{ "name": "categoryId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+					{ "name": "minPrice", "in": "query", "schema": { "type": "number" } },
+					{ "name": "maxPrice", "in": "query", "schema": { "type": "number" } },
+					{ "name": "inStock", "in": "query", "schema": { "type": "boolean" } },
+					{ "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } }
+				],
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/products/{slug}": {
+			"get": {
+				"summary": "Get product detail by slug",
+				"parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+				"responses": { "200": { "description": "OK" }, "404": { "description": "Not Found" } }
+			}
+		},
+		"/api/health": {
+			"get": {
+				"summary": "Health check",
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": { "type": "object", "properties": { "status": { "type": "string" } } }
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/register": {
+			"post": {
+				"summary": "Register new user",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"email": { "type": "string", "format": "email" },
+									"phone": { "type": "string" },
+									"password": { "type": "string" }
+								},
+								"required": ["email", "password"]
+							}
+						}
+					}
+				},
+				"responses": { "201": { "description": "Created" } }
+			}
+		},
+		"/api/auth/login": {
+			"post": {
+				"summary": "Login",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"email": { "type": "string", "format": "email" },
+									"password": { "type": "string" }
+								},
+								"required": ["email", "password"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/auth/logout": {
+			"post": {
+				"summary": "Logout (revoke refresh token)",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "refreshToken": { "type": "string" } },
+								"required": ["refreshToken"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/auth/refresh": {
+			"post": {
+				"summary": "Refresh access token",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "refreshToken": { "type": "string" } },
+								"required": ["refreshToken"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/auth/me": {
+			"get": {
+				"summary": "Get current user",
+				"security": [{ "bearerAuth": [] }],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			},
+			"put": {
+				"summary": "Update profile",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": false,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"phone": { "type": "string" },
+									"avatarUrl": { "type": "string" },
+									"email": { "type": "string", "format": "email" }
+								}
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/auth/change-password": {
+			"post": {
+				"summary": "Change password",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"currentPassword": { "type": "string" },
+									"newPassword": { "type": "string" }
+								},
+								"required": ["currentPassword", "newPassword"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/password/forgot": {
+			"post": {
+				"summary": "Request password reset",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "email": { "type": "string", "format": "email" } },
+								"required": ["email"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/password/reset": {
+			"post": {
+				"summary": "Reset password",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "token": { "type": "string" }, "newPassword": { "type": "string" } },
+								"required": ["token", "newPassword"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" } }
+			}
+		}
+	},
+	"components": {
+		"securitySchemes": {
+			"bearerAuth": {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT"
+			}
+		}
+	}
+}
