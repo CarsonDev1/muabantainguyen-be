@@ -5,6 +5,7 @@ import { getUserByEmail, updatePassword } from '../models/userModel.js';
 import { createPasswordReset, findValidResetByToken, markResetUsed } from '../models/passwordResetModel.js';
 import { hashPassword } from '../utils/password.js';
 import { revokeAllTokensForUser } from '../models/tokenModel.js';
+import { sendPasswordResetEmail } from './emailService.js';
 
 function getExpiry(hoursFromNow) {
   const d = new Date();
@@ -15,10 +16,19 @@ function getExpiry(hoursFromNow) {
 async function requestReset({ email }) {
   const user = await getUserByEmail(email);
   if (!user) return { success: true };
+
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = getExpiry(1);
+
   await createPasswordReset({ userId: user.id, token, expiresAt });
-  return { success: true, token };
+
+  try {
+    await sendPasswordResetEmail(email, token);
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send reset email:', error);
+    return { success: true, warning: 'Token created but email could not be sent' };
+  }
 }
 
 async function resetPasswordService({ token, newPassword }) {

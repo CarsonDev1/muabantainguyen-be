@@ -17,7 +17,7 @@ async function applyVoucherController(req, res) {
     let discounted = Number(amount);
     if (v.discount_percent) discounted = discounted * (1 - v.discount_percent / 100);
     if (v.discount_amount) discounted = Math.max(0, discounted - Number(v.discount_amount));
-    return res.json({ discountedAmount: Number(discounted.toFixed(2)) });
+    return res.json({ message: 'Voucher applied successfully', discountedAmount: Number(discounted.toFixed(2)) });
   } catch (err) {
     return res.status(500).json({ message: 'Failed to apply voucher', error: err.message });
   }

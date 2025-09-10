@@ -7,7 +7,7 @@ async function listResourcesController(req, res) {
   try {
     const { page, pageSize } = req.query;
     const items = await listDeliveries(req.user.id, { page: page ? Number(page) : undefined, pageSize: pageSize ? Number(pageSize) : undefined });
-    return res.json({ items });
+    return res.json({ message: 'Resources retrieved successfully', items });
   } catch (err) {
     return res.status(500).json({ message: 'Failed to fetch resources', error: err.message });
   }

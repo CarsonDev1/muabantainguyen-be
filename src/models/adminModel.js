@@ -3,14 +3,65 @@
 import { pool } from '../setup/db.js';
 
 // Users
-async function listUsers({ page = 1, pageSize = 20 }) {
+async function listUsers({ page = 1, pageSize = 20, search = '', role = '', isBlocked = '', sortBy = 'created_at', sortOrder = 'DESC' }) {
   const offset = (page - 1) * pageSize;
-  const { rows } = await pool.query(
-    `SELECT id, email, phone, name, role, is_blocked, created_at
-     FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
-    [pageSize, offset]
-  );
-  return rows;
+
+  // Build WHERE conditions
+  const conditions = [];
+  const params = [];
+  let paramIndex = 1;
+
+  // Search condition (name, email, phone)
+  if (search) {
+    conditions.push(`(name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR phone ILIKE $${paramIndex})`);
+    params.push(`%${search}%`);
+    paramIndex++;
+  }
+
+  // Role filter
+  if (role) {
+    conditions.push(`role = $${paramIndex}`);
+    params.push(role);
+    paramIndex++;
+  }
+
+  // Blocked status filter
+  if (isBlocked !== '') {
+    conditions.push(`is_blocked = $${paramIndex}`);
+    params.push(isBlocked === 'true');
+    paramIndex++;
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  // Get total count for pagination
+  const countQuery = `SELECT COUNT(*) as total FROM users ${whereClause}`;
+  const countResult = await pool.query(countQuery, params);
+  const total = parseInt(countResult.rows[0].total);
+
+  // Get users with pagination
+  const usersQuery = `
+    SELECT id, email, phone, name, role, is_blocked, created_at, updated_at
+    FROM users 
+    ${whereClause}
+    ORDER BY ${sortBy} ${sortOrder}
+    LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+  `;
+
+  params.push(pageSize, offset);
+  const { rows } = await pool.query(usersQuery, params);
+
+  return {
+    users: rows,
+    pagination: {
+      page: parseInt(page),
+      pageSize: parseInt(pageSize),
+      total,
+      totalPages: Math.ceil(total / pageSize),
+      hasNext: page * pageSize < total,
+      hasPrev: page > 1
+    }
+  };
 }
 
 async function setUserBlocked(userId, blocked) {

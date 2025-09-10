@@ -20,6 +20,14 @@ async function getUserByEmail(email) {
   return result.rows[0] || null;
 }
 
+async function getUserByPhone(phone) {
+  const result = await pool.query(
+    `SELECT * FROM users WHERE phone = $1 LIMIT 1`,
+    [phone]
+  );
+  return result.rows[0] || null;
+}
+
 async function getUserById(id) {
   const result = await pool.query(`SELECT id, name, email, phone, avatar_url, role, created_at FROM users WHERE id = $1`, [id]);
   return result.rows[0] || null;
@@ -43,5 +51,5 @@ async function updatePassword(userId, newHash) {
   await pool.query(`UPDATE users SET password_hash = $2 WHERE id = $1`, [userId, newHash]);
 }
 
-export { createUser, getUserByEmail, getUserById, updateUserProfile, updatePassword };
+export { createUser, getUserByEmail, getUserByPhone, getUserById, updateUserProfile, updatePassword };
 

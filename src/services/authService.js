@@ -2,8 +2,9 @@
 
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 import { hashPassword, comparePassword } from '../utils/password.js';
-import { createUser, getUserByEmail, getUserById } from '../models/userModel.js';
+import { createUser, getUserByEmail, getUserByPhone, getUserById } from '../models/userModel.js';
 import { saveRefreshToken, revokeRefreshToken, isRefreshTokenValid } from '../models/tokenModel.js';
+import { sendWelcomeEmail } from './emailService.js';
 
 function getTokenExpiryDate(daysFromNow) {
   const d = new Date();
@@ -13,11 +14,23 @@ function getTokenExpiryDate(daysFromNow) {
 
 async function register({ name, email, phone, password, userAgent, ip }) {
   if (!email || !password) throw new Error('Email and password are required');
-  const existing = await getUserByEmail(email);
-  if (existing) throw new Error('Email already registered');
+
+  const existingEmail = await getUserByEmail(email);
+  if (existingEmail) throw new Error('Email already registered');
+
+  if (phone) {
+    const existingPhone = await getUserByPhone(phone);
+    if (existingPhone) throw new Error('Phone number already registered');
+  }
 
   const passwordHash = await hashPassword(password);
   const user = await createUser({ name: name || null, email, phone: phone || null, passwordHash });
+
+  try {
+    await sendWelcomeEmail(email, name);
+  } catch (error) {
+    console.error('Failed to send welcome email:', error);
+  }
 
   const accessToken = signAccessToken({ sub: user.id, email: user.email, role: user.role });
   const refreshToken = signRefreshToken({ sub: user.id });
