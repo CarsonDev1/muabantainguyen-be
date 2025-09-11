@@ -675,6 +675,225 @@
 				},
 				"responses": { "200": { "description": "OK" } }
 			}
+		},
+		"/api/uploads/images": {
+			"post": {
+				"summary": "Upload single hoặc multiple images",
+				"description": "Upload 1 hoặc nhiều ảnh cùng lúc, tối đa 10 files, mỗi file tối đa 10MB",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"files": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"format": "binary"
+										},
+										"description": "Các file ảnh cần upload (tối đa 10 files)"
+									},
+									"folder": {
+										"type": "string",
+										"description": "Thư mục con trong Cloudinary (optional)",
+										"example": "products"
+									}
+								},
+								"required": ["files"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Upload thành công",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"data": {
+											"type": "object",
+											"properties": {
+												"successful": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"success": { "type": "boolean" },
+															"url": { "type": "string" },
+															"public_id": { "type": "string" },
+															"width": { "type": "integer" },
+															"height": { "type": "integer" },
+															"format": { "type": "string" },
+															"bytes": { "type": "integer" },
+															"originalName": { "type": "string" }
+														}
+													}
+												},
+												"failed": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"success": { "type": "boolean" },
+															"error": { "type": "string" },
+															"originalName": { "type": "string" }
+														}
+													}
+												},
+												"total": { "type": "integer" },
+												"successCount": { "type": "integer" },
+												"failCount": { "type": "integer" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request - No files hoặc validation error"
+					},
+					"401": {
+						"description": "Unauthorized"
+					}
+				}
+			}
+		},
+		"/api/uploads/avatar": {
+			"post": {
+				"summary": "Upload avatar cho user",
+				"description": "Upload avatar, tự động resize về 200x200px và crop theo khuôn mặt",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"file": {
+										"type": "string",
+										"format": "binary",
+										"description": "File ảnh avatar"
+									}
+								},
+								"required": ["file"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Avatar upload thành công",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"data": {
+											"type": "object",
+											"properties": {
+												"url": { "type": "string" },
+												"public_id": { "type": "string" },
+												"width": { "type": "integer" },
+												"height": { "type": "integer" },
+												"format": { "type": "string" },
+												"bytes": { "type": "integer" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request - No file"
+					},
+					"401": {
+						"description": "Unauthorized"
+					}
+				}
+			}
+		},
+		"/api/uploads/product": {
+			"post": {
+				"summary": "Upload product images",
+				"description": "Upload ảnh sản phẩm, tối đa 5 files",
+				"security": [{ "bearerAuth": [] }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"files": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"format": "binary"
+										},
+										"description": "Các file ảnh sản phẩm (tối đa 5 files)"
+									}
+								},
+								"required": ["files"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Product images upload thành công",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"data": {
+											"type": "object",
+											"properties": {
+												"images": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"url": { "type": "string" },
+															"public_id": { "type": "string" },
+															"width": { "type": "integer" },
+															"height": { "type": "integer" },
+															"format": { "type": "string" },
+															"bytes": { "type": "integer" },
+															"originalName": { "type": "string" }
+														}
+													}
+												},
+												"count": { "type": "integer" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Bad request - No files"
+					},
+					"401": {
+						"description": "Unauthorized"
+					}
+				}
+			}
 		}
 	},
 	"components": {
