@@ -26,6 +26,7 @@ import resourceRoutes from './routes/resourceRoutes.js';
 import publicRoutes from './routes/publicRoutes.js';
 import securityRoutes from './routes/securityRoutes.js';
 import voucherRoutes from './routes/voucherRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/vouchers', voucherRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // Swagger UI and raw spec
 const __filename = fileURLToPath(import.meta.url);

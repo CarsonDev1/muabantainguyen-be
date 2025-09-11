@@ -1,0 +1,38 @@
+'use strict';
+
+import express from 'express';
+import multer from 'multer';
+import { uploadBuffer } from '../services/cloudinaryService.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { adminOnly } from '../middleware/adminMiddleware.js';
+
+const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
+// POST /api/uploads/image
+router.post('/image', authMiddleware, adminOnly, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'Missing file' });
+
+    const folder = process.env.CLOUDINARY_FOLDER || 'uploads';
+    const result = await uploadBuffer(req.file.buffer, folder);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Uploaded successfully',
+      url: result.secure_url,
+      public_id: result.public_id,
+      width: result.width,
+      height: result.height,
+      format: result.format,
+      bytes: result.bytes,
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Upload failed', error: err.message });
+  }
+});
+
+export default router;
