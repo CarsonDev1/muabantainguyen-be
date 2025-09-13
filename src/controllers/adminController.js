@@ -12,6 +12,7 @@ import {
   listAllVouchers,
   updateExistingVoucher,
   deleteExistingVoucher,
+  getProductDetail,
 } from '../services/adminService.js';
 
 async function listUsersController(req, res) {
@@ -138,6 +139,32 @@ async function deleteVoucherController(req, res) {
   }
 }
 
+async function getProductController(req, res) {
+  try {
+    const { id } = req.params;
+    const product = await getProductDetail(id);
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Product retrieved successfully',
+      product
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to get product',
+      error: err.message
+    });
+  }
+}
+
 export {
   listUsersController,
   setBlockController,
@@ -149,5 +176,6 @@ export {
   listVouchersController,
   updateVoucherController,
   deleteVoucherController,
+  getProductController,
 };
 

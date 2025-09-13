@@ -30,7 +30,7 @@ async function listProducts({ q, categoryId, minPrice, maxPrice, inStock, limit 
 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const { rows } = await pool.query(
-    `SELECT id, name, slug, price, stock, image_url, category_id
+    `SELECT id, name, slug, price, stock, image_url, category_id, description
      FROM products
      ${where}
      ORDER BY created_at DESC

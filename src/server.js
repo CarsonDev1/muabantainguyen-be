@@ -1,7 +1,8 @@
 'use strict';
 
-import express from 'express';
 import dotenv from 'dotenv';
+dotenv.config();
+import express from 'express';
 import morgan from 'morgan';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -12,7 +13,6 @@ import { fileURLToPath } from 'url';
 import { activityLogger } from './middleware/activityLogger.js';
 import cors from 'cors';
 
-dotenv.config();
 
 import { pool } from './setup/db.js';
 import authRoutes from './routes/authRoutes.js';

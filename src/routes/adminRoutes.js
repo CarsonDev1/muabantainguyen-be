@@ -15,7 +15,23 @@ import {
   listVouchersController,
   updateVoucherController,
   deleteVoucherController,
+  getProductController,
 } from '../controllers/adminController.js';
+
+import {
+  listAdminsController,
+  createAdminController,
+  updateAdminRoleController,
+  listRolesController,
+  listPermissionsController
+} from '../controllers/adminManagementController.js';
+
+import {
+  getAllSettingsController,
+  updateSettingsController
+} from '../controllers/siteSettingsController.js';
+
+import { requirePermission } from '../middleware/permissionMiddleware.js';
 
 const router = express.Router();
 
@@ -28,6 +44,7 @@ router.get('/users/:id/orders', adminOnly, userOrdersController);
 router.post('/products', adminOnly, createProductController);
 router.put('/products/:id', adminOnly, updateProductController);
 router.delete('/products/:id', adminOnly, deleteProductController);
+router.get('/products/:id', adminOnly, getProductController);
 
 // Categories CRUD + tree
 router.post('/categories', adminOnly, createCategoryController);
@@ -84,6 +101,25 @@ router.put('/settings', adminOnly, async (req, res) => {
   }
   res.json({ success: true });
 });
+
+// Admin Management Routes
+router.get('/admins', requirePermission('admins.view'), listAdminsController);
+router.post('/admins', requirePermission('admins.create'), createAdminController);
+router.put('/admins/:id/role', requirePermission('admins.edit'), updateAdminRoleController);
+
+// Role & Permission Routes
+router.get('/roles', requirePermission('admins.view'), listRolesController);
+router.get('/permissions', requirePermission('admins.view'), listPermissionsController);
+
+// Settings Routes (replace existing)
+router.get('/settings', requirePermission('settings.view'), getAllSettingsController);
+router.put('/settings', requirePermission('settings.edit'), updateSettingsController);
+
+// Update existing product routes với permissions
+router.get('/products/:id', requirePermission('products.view'), getProductController);
+router.post('/products', requirePermission('products.create'), createProductController);
+router.put('/products/:id', requirePermission('products.edit'), updateProductController);
+router.delete('/products/:id', requirePermission('products.delete'), deleteProductController);
 
 export default router;
 

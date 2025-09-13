@@ -2,26 +2,56 @@
 	"openapi": "3.0.3",
 	"info": {
 		"title": "Muabantainguyen API",
-		"version": "0.1.0",
-		"description": "API documentation for auth and password reset"
+		"version": "0.2.0",
+		"description": "API documentation with admin management, permissions, and site settings"
 	},
 	"servers": [{ "url": "http://localhost:4000" }],
 	"paths": {
-		"/api/resources": {
+		"/api/admin/admins": {
 			"get": {
-				"summary": "List purchased resources (auto-deleted after 30 days)",
+				"summary": "List all admins with roles and permissions",
 				"security": [{ "bearerAuth": [] }],
-				"parameters": [
-					{ "name": "page", "in": "query", "schema": { "type": "integer" } },
-					{ "name": "pageSize", "in": "query", "schema": { "type": "integer" } }
-				],
-				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
-			}
-		},
-		"/api/payments/start": {
+				"tags": ["Admin Management"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"admins": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string" },
+													"email": { "type": "string" },
+													"phone": { "type": "string" },
+													"role": { "type": "string", "enum": ["admin", "super", "staff"] },
+													"admin_role_name": { "type": "string" },
+													"admin_role_display": { "type": "string" },
+													"permissions": { "type": "array", "items": { "type": "string" } },
+													"is_blocked": { "type": "boolean" },
+													"created_at": { "type": "string", "format": "date-time" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Forbidden - requires admins.view permission" }
+				}
+			},
 			"post": {
-				"summary": "Start Sepay payment for existing order",
+				"summary": "Create new admin account",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Management"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -29,35 +59,476 @@
 							"schema": {
 								"type": "object",
 								"properties": {
-									"orderId": { "type": "string", "format": "uuid" },
-									"amount": { "type": "number" }
+									"name": { "type": "string", "example": "John Admin" },
+									"email": { "type": "string", "format": "email", "example": "admin@shop.com" },
+									"phone": { "type": "string", "example": "0123456789" },
+									"password": { "type": "string", "example": "securepassword123" },
+									"adminRoleId": { "type": "string", "format": "uuid", "example": "uuid-of-role" }
 								},
-								"required": ["orderId", "amount"]
+								"required": ["email", "password", "adminRoleId"]
 							}
 						}
 					}
 				},
-				"responses": { "201": { "description": "Created" }, "401": { "description": "Unauthorized" } }
-			}
-		},
-		"/api/payments/checkout": {
-			"post": {
-				"summary": "Checkout cart and create Sepay payment",
-				"security": [{ "bearerAuth": [] }],
 				"responses": {
-					"201": { "description": "Created" },
-					"400": { "description": "Bad request" },
-					"401": { "description": "Unauthorized" }
+					"201": { "description": "Admin created successfully" },
+					"400": { "description": "Bad request - missing required fields" },
+					"403": { "description": "Forbidden - requires admins.create permission" }
 				}
 			}
 		},
-		"/api/payments/webhook/sepay": {
-			"post": {
-				"summary": "Sepay webhook receiver",
+		"/api/admin/admins/{id}/role": {
+			"put": {
+				"summary": "Update admin role",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Management"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"adminRoleId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["adminRoleId"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Admin role updated successfully" },
+					"403": { "description": "Forbidden - requires admins.edit permission" }
+				}
+			}
+		},
+		"/api/admin/roles": {
+			"get": {
+				"summary": "List all admin roles with permissions",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Roles & Permissions"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"roles": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string", "example": "product_manager" },
+													"display_name": { "type": "string", "example": "Product Manager" },
+													"description": { "type": "string" },
+													"is_active": { "type": "boolean" },
+													"permissions": {
+														"type": "array",
+														"items": {
+															"type": "object",
+															"properties": {
+																"name": {
+																	"type": "string",
+																	"example": "products.view"
+																},
+																"display_name": {
+																	"type": "string",
+																	"example": "Xem sản phẩm"
+																},
+																"module": { "type": "string", "example": "products" }
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Forbidden - requires admins.view permission" }
+				}
+			}
+		},
+		"/api/admin/permissions": {
+			"get": {
+				"summary": "List all permissions grouped by module",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Roles & Permissions"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"permissions": {
+											"type": "object",
+											"additionalProperties": {
+												"type": "array",
+												"items": {
+													"type": "object",
+													"properties": {
+														"id": { "type": "string", "format": "uuid" },
+														"name": { "type": "string", "example": "products.create" },
+														"display_name": { "type": "string", "example": "Tạo sản phẩm" },
+														"description": { "type": "string" },
+														"module": { "type": "string", "example": "products" }
+													}
+												}
+											},
+											"example": {
+												"products": [
+													{
+														"name": "products.view",
+														"display_name": "Xem sản phẩm",
+														"module": "products"
+													}
+												],
+												"orders": [
+													{
+														"name": "orders.view",
+														"display_name": "Xem đơn hàng",
+														"module": "orders"
+													}
+												]
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Forbidden - requires admins.view permission" }
+				}
+			}
+		},
+		"/api/admin/settings": {
+			"get": {
+				"summary": "Get all site settings (admin only)",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Site Settings"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"settings": {
+											"type": "object",
+											"additionalProperties": {
+												"type": "object",
+												"additionalProperties": {
+													"type": "object",
+													"properties": {
+														"value": { "type": "string" },
+														"type": {
+															"type": "string",
+															"enum": ["text", "number", "boolean", "json", "image"]
+														},
+														"display_name": { "type": "string" },
+														"description": { "type": "string" },
+														"is_public": { "type": "boolean" }
+													}
+												}
+											},
+											"example": {
+												"branding": {
+													"site_name": {
+														"value": "My Shop",
+														"type": "text",
+														"display_name": "Tên website",
+														"is_public": true
+													},
+													"site_logo": {
+														"value": "https://logo-url.com",
+														"type": "image",
+														"display_name": "Logo website",
+														"is_public": true
+													}
+												},
+												"contact": {
+													"contact_email": {
+														"value": "contact@shop.com",
+														"type": "text",
+														"display_name": "Email liên hệ",
+														"is_public": true
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Forbidden - requires settings.view permission" }
+				}
+			},
+			"put": {
+				"summary": "Update site settings",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Site Settings"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"additionalProperties": { "type": "string" },
+								"example": {
+									"site_name": "My New Shop Name",
+									"site_logo": "https://new-logo-url.com",
+									"contact_email": "newcontact@shop.com",
+									"maintenance_mode": "false",
+									"allow_registration": "true"
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Settings updated successfully" },
+					"403": { "description": "Forbidden - requires settings.edit permission" }
+				}
+			}
+		},
+		"/api/public/settings": {
+			"get": {
+				"summary": "Get public site settings (no auth required)",
+				"tags": ["Public"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"settings": {
+											"type": "object",
+											"additionalProperties": true,
+											"example": {
+												"site_name": "My Shop",
+												"site_logo": "https://logo-url.com",
+												"site_banner": "https://banner-url.com",
+												"contact_email": "contact@shop.com",
+												"contact_phone": "0123456789",
+												"seo_title": "My Shop - Best Digital Products",
+												"seo_description": "Description for SEO",
+												"default_currency": "VND",
+												"maintenance_mode": false,
+												"allow_registration": true
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/products/{id}": {
+			"get": {
+				"summary": "Admin: get product detail",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Products"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"product": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"name": { "type": "string" },
+												"slug": { "type": "string" },
+												"description": { "type": "string" },
+												"price": { "type": "number" },
+												"stock": { "type": "integer" },
+												"image_url": { "type": "string" },
+												"category_id": { "type": "string", "format": "uuid" },
+												"category_name": { "type": "string" },
+												"category_slug": { "type": "string" },
+												"is_active": { "type": "boolean" },
+												"created_at": { "type": "string", "format": "date-time" },
+												"updated_at": { "type": "string", "format": "date-time" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Product not found" },
+					"403": { "description": "Forbidden - requires products.view permission" }
+				}
+			},
+			"put": {
+				"summary": "Admin: update product",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Products"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"slug": { "type": "string" },
+									"description": { "type": "string" },
+									"price": { "type": "number" },
+									"stock": { "type": "integer" },
+									"imageUrl": { "type": "string" },
+									"categoryId": { "type": "string", "format": "uuid" },
+									"isActive": { "type": "boolean" }
+								}
+							}
+						}
+					}
+				},
 				"responses": {
 					"200": { "description": "OK" },
-					"400": { "description": "Bad request" },
-					"401": { "description": "Invalid signature" }
+					"403": { "description": "Forbidden - requires products.edit permission" }
+				}
+			},
+			"delete": {
+				"summary": "Admin: delete product",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Products"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires products.delete permission" }
+				}
+			}
+		},
+		"/api/admin/products": {
+			"post": {
+				"summary": "Admin: create product",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Products"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"slug": { "type": "string" },
+									"description": { "type": "string" },
+									"price": { "type": "number" },
+									"stock": { "type": "integer" },
+									"imageUrl": { "type": "string" },
+									"categoryId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["name", "slug", "price"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Created" },
+					"403": { "description": "Forbidden - requires products.create permission" }
+				}
+			}
+		},
+		"/api/admin/categories": {
+			"post": {
+				"summary": "Admin: create category",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Categories"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"slug": { "type": "string" },
+									"parentId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["name", "slug"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Created" },
+					"403": { "description": "Forbidden - requires categories.manage permission" }
+				}
+			}
+		},
+		"/api/admin/categories/{id}": {
+			"put": {
+				"summary": "Admin: update category",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Categories"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires categories.manage permission" }
+				}
+			},
+			"delete": {
+				"summary": "Admin: delete category",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Categories"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires categories.manage permission" }
+				}
+			}
+		},
+		"/api/admin/categories/tree": {
+			"get": {
+				"summary": "Admin: get category tree",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Categories"],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires categories.manage permission" }
 				}
 			}
 		},
@@ -65,6 +536,7 @@
 			"get": {
 				"summary": "Admin: list users with pagination, search and filters",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Users"],
 				"parameters": [
 					{
 						"name": "page",
@@ -114,48 +586,8 @@
 					}
 				],
 				"responses": {
-					"200": {
-						"description": "OK",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"success": { "type": "boolean" },
-										"message": { "type": "string" },
-										"users": {
-											"type": "array",
-											"items": {
-												"type": "object",
-												"properties": {
-													"id": { "type": "string", "format": "uuid" },
-													"name": { "type": "string" },
-													"email": { "type": "string" },
-													"phone": { "type": "string" },
-													"role": { "type": "string" },
-													"is_blocked": { "type": "boolean" },
-													"created_at": { "type": "string", "format": "date-time" },
-													"updated_at": { "type": "string", "format": "date-time" }
-												}
-											}
-										},
-										"pagination": {
-											"type": "object",
-											"properties": {
-												"page": { "type": "integer" },
-												"pageSize": { "type": "integer" },
-												"total": { "type": "integer" },
-												"totalPages": { "type": "integer" },
-												"hasNext": { "type": "boolean" },
-												"hasPrev": { "type": "boolean" }
-											}
-										}
-									}
-								}
-							}
-						}
-					},
-					"403": { "description": "Forbidden" }
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires users.view permission" }
 				}
 			}
 		},
@@ -163,6 +595,7 @@
 			"put": {
 				"summary": "Admin: block/unblock user",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Users"],
 				"parameters": [
 					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
 				],
@@ -178,73 +611,37 @@
 						}
 					}
 				},
-				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires users.block permission" }
+				}
 			}
 		},
 		"/api/admin/users/{id}/orders": {
 			"get": {
 				"summary": "Admin: get user orders",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Users"],
 				"parameters": [
 					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
 				],
-				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
-			}
-		},
-		"/api/admin/products": {
-			"post": {
-				"summary": "Admin: create product",
-				"security": [{ "bearerAuth": [] }],
-				"requestBody": {
-					"required": true,
-					"content": {
-						"application/json": {
-							"schema": {
-								"type": "object",
-								"properties": {
-									"name": { "type": "string" },
-									"slug": { "type": "string" },
-									"description": { "type": "string" },
-									"price": { "type": "number" },
-									"stock": { "type": "integer" },
-									"imageUrl": { "type": "string" },
-									"categoryId": { "type": "string", "format": "uuid" }
-								},
-								"required": ["name", "slug", "price"]
-							}
-						}
-					}
-				},
-				"responses": { "201": { "description": "Created" }, "403": { "description": "Forbidden" } }
-			}
-		},
-		"/api/admin/products/{id}": {
-			"put": {
-				"summary": "Admin: update product",
-				"security": [{ "bearerAuth": [] }],
-				"parameters": [
-					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-				],
-				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
-			},
-			"delete": {
-				"summary": "Admin: delete product",
-				"security": [{ "bearerAuth": [] }],
-				"parameters": [
-					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-				],
-				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires orders.view permission" }
+				}
 			}
 		},
 		"/api/admin/vouchers": {
 			"get": {
 				"summary": "Admin: list vouchers",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Vouchers"],
 				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
 			},
 			"post": {
 				"summary": "Admin: create voucher",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Vouchers"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -273,6 +670,7 @@
 			"put": {
 				"summary": "Admin: update voucher",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Vouchers"],
 				"parameters": [
 					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
 				],
@@ -281,16 +679,30 @@
 			"delete": {
 				"summary": "Admin: delete voucher",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Vouchers"],
 				"parameters": [
 					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
 				],
 				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
 			}
 		},
-		"/api/admin/categories": {
-			"post": {
-				"summary": "Admin: create category (supports parentId)",
+		"/api/resources": {
+			"get": {
+				"summary": "List purchased resources (auto-deleted after 30 days)",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["User Resources"],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer" } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer" } }
+				],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/payments/start": {
+			"post": {
+				"summary": "Start Sepay payment for existing order",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Payments"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -298,46 +710,58 @@
 							"schema": {
 								"type": "object",
 								"properties": {
-									"name": { "type": "string" },
-									"slug": { "type": "string" },
-									"parentId": { "type": "string", "format": "uuid" }
+									"orderId": { "type": "string", "format": "uuid" },
+									"amount": { "type": "number" }
 								},
-								"required": ["name", "slug"]
+								"required": ["orderId", "amount"]
 							}
 						}
 					}
 				},
-				"responses": { "201": { "description": "Created" }, "403": { "description": "Forbidden" } }
+				"responses": { "201": { "description": "Created" }, "401": { "description": "Unauthorized" } }
 			}
 		},
-		"/api/admin/categories/{id}": {
-			"put": {
-				"summary": "Admin: update category",
+		"/api/payments/checkout": {
+			"post": {
+				"summary": "Checkout cart and create Sepay payment",
 				"security": [{ "bearerAuth": [] }],
-				"parameters": [
-					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-				],
-				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
-			},
-			"delete": {
-				"summary": "Admin: delete category",
-				"security": [{ "bearerAuth": [] }],
-				"parameters": [
-					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-				],
-				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+				"tags": ["Payments"],
+				"responses": {
+					"201": { "description": "Created" },
+					"400": { "description": "Bad request" },
+					"401": { "description": "Unauthorized" }
+				}
 			}
 		},
-		"/api/admin/categories/tree": {
-			"get": {
-				"summary": "Admin: get category tree",
-				"security": [{ "bearerAuth": [] }],
-				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+		"/api/payments/webhook/sepay": {
+			"post": {
+				"summary": "Sepay webhook receiver",
+				"tags": ["Payments"],
+				"responses": {
+					"200": { "description": "OK" },
+					"400": { "description": "Bad request" },
+					"401": { "description": "Invalid signature" }
+				}
 			}
 		},
 		"/api/public/categories/tree": {
 			"get": {
 				"summary": "Public: get category tree",
+				"tags": ["Public"],
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/public/faqs": {
+			"get": {
+				"summary": "Public: get FAQs",
+				"tags": ["Public"],
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/public/announcements": {
+			"get": {
+				"summary": "Public: get announcements",
+				"tags": ["Public"],
 				"responses": { "200": { "description": "OK" } }
 			}
 		},
@@ -345,6 +769,7 @@
 			"get": {
 				"summary": "Get current user's cart",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Cart"],
 				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
 			}
 		},
@@ -352,6 +777,7 @@
 			"post": {
 				"summary": "Add item to cart",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Cart"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -379,6 +805,7 @@
 			"put": {
 				"summary": "Update item quantity",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Cart"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -401,6 +828,7 @@
 			"post": {
 				"summary": "Remove item from cart",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Cart"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -420,6 +848,7 @@
 			"post": {
 				"summary": "Clear the cart",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Cart"],
 				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
 			}
 		},
@@ -427,6 +856,7 @@
 			"post": {
 				"summary": "Checkout current cart into an order",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
 				"requestBody": {
 					"required": false,
 					"content": {
@@ -446,6 +876,7 @@
 			"get": {
 				"summary": "List user's orders",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
 				"parameters": [
 					{ "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
 					{ "name": "pageSize", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } }
@@ -457,6 +888,7 @@
 			"get": {
 				"summary": "Get order detail",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
 				"parameters": [
 					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
 				],
@@ -470,12 +902,14 @@
 		"/api/products/categories": {
 			"get": {
 				"summary": "List categories",
+				"tags": ["Products"],
 				"responses": { "200": { "description": "OK" } }
 			}
 		},
 		"/api/products": {
 			"get": {
 				"summary": "List products with filters",
+				"tags": ["Products"],
 				"parameters": [
 					{ "name": "q", "in": "query", "schema": { "type": "string" } },
 					{ "name": "categoryId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
@@ -491,13 +925,131 @@
 		"/api/products/{slug}": {
 			"get": {
 				"summary": "Get product detail by slug",
+				"tags": ["Products"],
 				"parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
 				"responses": { "200": { "description": "OK" }, "404": { "description": "Not Found" } }
+			}
+		},
+		"/api/vouchers/apply": {
+			"post": {
+				"summary": "Apply voucher code",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Vouchers"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"code": { "type": "string", "example": "DISCOUNT10" },
+									"amount": { "type": "number", "example": 100000 }
+								},
+								"required": ["code", "amount"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Voucher applied successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"discountedAmount": { "type": "number" }
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Bad request" },
+					"404": { "description": "Voucher not found" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/security/2fa/enable": {
+			"post": {
+				"summary": "Enable 2FA for user",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Security"],
+				"responses": {
+					"200": {
+						"description": "2FA enabled successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"otpauth": { "type": "string" },
+										"qr": { "type": "string", "description": "Base64 QR code" }
+									}
+								}
+							}
+						}
+					},
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/security/2fa/disable": {
+			"post": {
+				"summary": "Disable 2FA for user",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Security"],
+				"responses": {
+					"200": { "description": "2FA disabled successfully" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/security/2fa/verify": {
+			"post": {
+				"summary": "Verify 2FA token",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Security"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"token": { "type": "string", "example": "123456" }
+								},
+								"required": ["token"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Token verification result",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"valid": { "type": "boolean" }
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Bad request" },
+					"401": { "description": "Unauthorized" }
+				}
 			}
 		},
 		"/api/health": {
 			"get": {
 				"summary": "Health check",
+				"tags": ["System"],
 				"responses": {
 					"200": {
 						"description": "OK",
@@ -513,6 +1065,7 @@
 		"/api/auth/register": {
 			"post": {
 				"summary": "Register new user",
+				"tags": ["Authentication"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -536,6 +1089,7 @@
 		"/api/auth/login": {
 			"post": {
 				"summary": "Login",
+				"tags": ["Authentication"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -557,6 +1111,7 @@
 		"/api/auth/logout": {
 			"post": {
 				"summary": "Logout (revoke refresh token)",
+				"tags": ["Authentication"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -575,6 +1130,7 @@
 		"/api/auth/refresh": {
 			"post": {
 				"summary": "Refresh access token",
+				"tags": ["Authentication"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -594,11 +1150,13 @@
 			"get": {
 				"summary": "Get current user",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Authentication"],
 				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
 			},
 			"put": {
 				"summary": "Update profile",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Authentication"],
 				"requestBody": {
 					"required": false,
 					"content": {
@@ -622,6 +1180,7 @@
 			"post": {
 				"summary": "Change password",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["Authentication"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -643,6 +1202,7 @@
 		"/api/password/forgot": {
 			"post": {
 				"summary": "Request password reset",
+				"tags": ["Password Reset"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -661,6 +1221,7 @@
 		"/api/password/reset": {
 			"post": {
 				"summary": "Reset password",
+				"tags": ["Password Reset"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -681,6 +1242,7 @@
 				"summary": "Upload single hoặc multiple images",
 				"description": "Upload 1 hoặc nhiều ảnh cùng lúc, tối đa 10 files, mỗi file tối đa 10MB",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["File Upload"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -708,61 +1270,9 @@
 					}
 				},
 				"responses": {
-					"201": {
-						"description": "Upload thành công",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"success": { "type": "boolean" },
-										"message": { "type": "string" },
-										"data": {
-											"type": "object",
-											"properties": {
-												"successful": {
-													"type": "array",
-													"items": {
-														"type": "object",
-														"properties": {
-															"success": { "type": "boolean" },
-															"url": { "type": "string" },
-															"public_id": { "type": "string" },
-															"width": { "type": "integer" },
-															"height": { "type": "integer" },
-															"format": { "type": "string" },
-															"bytes": { "type": "integer" },
-															"originalName": { "type": "string" }
-														}
-													}
-												},
-												"failed": {
-													"type": "array",
-													"items": {
-														"type": "object",
-														"properties": {
-															"success": { "type": "boolean" },
-															"error": { "type": "string" },
-															"originalName": { "type": "string" }
-														}
-													}
-												},
-												"total": { "type": "integer" },
-												"successCount": { "type": "integer" },
-												"failCount": { "type": "integer" }
-											}
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - No files hoặc validation error"
-					},
-					"401": {
-						"description": "Unauthorized"
-					}
+					"201": { "description": "Upload thành công" },
+					"400": { "description": "Bad request - No files hoặc validation error" },
+					"401": { "description": "Unauthorized" }
 				}
 			}
 		},
@@ -771,6 +1281,7 @@
 				"summary": "Upload avatar cho user",
 				"description": "Upload avatar, tự động resize về 200x200px và crop theo khuôn mặt",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["File Upload"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -790,37 +1301,9 @@
 					}
 				},
 				"responses": {
-					"201": {
-						"description": "Avatar upload thành công",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"success": { "type": "boolean" },
-										"message": { "type": "string" },
-										"data": {
-											"type": "object",
-											"properties": {
-												"url": { "type": "string" },
-												"public_id": { "type": "string" },
-												"width": { "type": "integer" },
-												"height": { "type": "integer" },
-												"format": { "type": "string" },
-												"bytes": { "type": "integer" }
-											}
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - No file"
-					},
-					"401": {
-						"description": "Unauthorized"
-					}
+					"201": { "description": "Avatar upload thành công" },
+					"400": { "description": "Bad request - No file" },
+					"401": { "description": "Unauthorized" }
 				}
 			}
 		},
@@ -829,6 +1312,7 @@
 				"summary": "Upload product images",
 				"description": "Upload ảnh sản phẩm, tối đa 5 files",
 				"security": [{ "bearerAuth": [] }],
+				"tags": ["File Upload"],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -851,47 +1335,9 @@
 					}
 				},
 				"responses": {
-					"201": {
-						"description": "Product images upload thành công",
-						"content": {
-							"application/json": {
-								"schema": {
-									"type": "object",
-									"properties": {
-										"success": { "type": "boolean" },
-										"message": { "type": "string" },
-										"data": {
-											"type": "object",
-											"properties": {
-												"images": {
-													"type": "array",
-													"items": {
-														"type": "object",
-														"properties": {
-															"url": { "type": "string" },
-															"public_id": { "type": "string" },
-															"width": { "type": "integer" },
-															"height": { "type": "integer" },
-															"format": { "type": "string" },
-															"bytes": { "type": "integer" },
-															"originalName": { "type": "string" }
-														}
-													}
-												},
-												"count": { "type": "integer" }
-											}
-										}
-									}
-								}
-							}
-						}
-					},
-					"400": {
-						"description": "Bad request - No files"
-					},
-					"401": {
-						"description": "Unauthorized"
-					}
+					"201": { "description": "Product images upload thành công" },
+					"400": { "description": "Bad request - No files" },
+					"401": { "description": "Unauthorized" }
 				}
 			}
 		}
@@ -903,6 +1349,116 @@
 				"scheme": "bearer",
 				"bearerFormat": "JWT"
 			}
+		},
+		"schemas": {
+			"Error": {
+				"type": "object",
+				"properties": {
+					"success": { "type": "boolean", "example": false },
+					"message": { "type": "string" },
+					"error": { "type": "string" }
+				}
+			},
+			"Success": {
+				"type": "object",
+				"properties": {
+					"success": { "type": "boolean", "example": true },
+					"message": { "type": "string" }
+				}
+			},
+			"Pagination": {
+				"type": "object",
+				"properties": {
+					"page": { "type": "integer" },
+					"pageSize": { "type": "integer" },
+					"total": { "type": "integer" },
+					"totalPages": { "type": "integer" },
+					"hasNext": { "type": "boolean" },
+					"hasPrev": { "type": "boolean" }
+				}
+			},
+			"User": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"name": { "type": "string" },
+					"email": { "type": "string", "format": "email" },
+					"phone": { "type": "string" },
+					"avatar_url": { "type": "string" },
+					"role": { "type": "string", "enum": ["user", "admin", "super", "staff"] },
+					"is_blocked": { "type": "boolean" },
+					"created_at": { "type": "string", "format": "date-time" },
+					"updated_at": { "type": "string", "format": "date-time" }
+				}
+			},
+			"Product": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"name": { "type": "string" },
+					"slug": { "type": "string" },
+					"description": { "type": "string" },
+					"price": { "type": "number" },
+					"stock": { "type": "integer" },
+					"image_url": { "type": "string" },
+					"category_id": { "type": "string", "format": "uuid" },
+					"is_active": { "type": "boolean" },
+					"created_at": { "type": "string", "format": "date-time" },
+					"updated_at": { "type": "string", "format": "date-time" }
+				}
+			},
+			"AdminRole": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"name": { "type": "string", "example": "product_manager" },
+					"display_name": { "type": "string", "example": "Product Manager" },
+					"description": { "type": "string" },
+					"is_active": { "type": "boolean" },
+					"permissions": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"name": { "type": "string" },
+								"display_name": { "type": "string" },
+								"module": { "type": "string" }
+							}
+						}
+					}
+				}
+			},
+			"Permission": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"name": { "type": "string", "example": "products.view" },
+					"display_name": { "type": "string", "example": "Xem sản phẩm" },
+					"description": { "type": "string" },
+					"module": { "type": "string", "example": "products" }
+				}
+			}
 		}
-	}
+	},
+	"tags": [
+		{ "name": "Authentication", "description": "User authentication endpoints" },
+		{ "name": "Password Reset", "description": "Password reset functionality" },
+		{ "name": "Products", "description": "Public product endpoints" },
+		{ "name": "Cart", "description": "Shopping cart management" },
+		{ "name": "Orders", "description": "Order management" },
+		{ "name": "Payments", "description": "Payment processing" },
+		{ "name": "Vouchers", "description": "Voucher/coupon system" },
+		{ "name": "Security", "description": "2FA and security features" },
+		{ "name": "User Resources", "description": "User purchased resources" },
+		{ "name": "File Upload", "description": "File upload endpoints" },
+		{ "name": "Public", "description": "Public endpoints (no auth)" },
+		{ "name": "System", "description": "System health and status" },
+		{ "name": "Admin Management", "description": "Admin user management with roles" },
+		{ "name": "Roles & Permissions", "description": "Role and permission management" },
+		{ "name": "Site Settings", "description": "Website configuration" },
+		{ "name": "Admin Products", "description": "Admin product management" },
+		{ "name": "Admin Categories", "description": "Admin category management" },
+		{ "name": "Admin Users", "description": "Admin user management" },
+		{ "name": "Admin Vouchers", "description": "Admin voucher management" }
+	]
 }

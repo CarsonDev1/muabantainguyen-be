@@ -86,6 +86,17 @@ async function createProduct({ name, slug, description, price, stock, imageUrl, 
   return rows[0].id;
 }
 
+async function getProductById(id) {
+  const { rows } = await pool.query(
+    `SELECT p.*, c.name as category_name, c.slug as category_slug
+     FROM products p
+     LEFT JOIN categories c ON c.id = p.category_id
+     WHERE p.id = $1`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
 async function updateProduct(id, fields) {
   const updates = [];
   const params = [id];
@@ -136,5 +147,5 @@ async function deleteVoucher(id) {
   await pool.query(`DELETE FROM vouchers WHERE id = $1`, [id]);
 }
 
-export { listUsers, setUserBlocked, getUserOrders, createProduct, updateProduct, deleteProduct, createVoucher, listVouchers, updateVoucher, deleteVoucher };
+export { listUsers, setUserBlocked, getUserOrders, createProduct, updateProduct, deleteProduct, createVoucher, listVouchers, updateVoucher, deleteVoucher, getProductById };
 

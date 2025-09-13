@@ -1,6 +1,6 @@
 'use strict';
 
-import { listUsers, setUserBlocked, getUserOrders, createProduct, updateProduct, deleteProduct, createVoucher, listVouchers, updateVoucher, deleteVoucher } from '../models/adminModel.js';
+import { listUsers, setUserBlocked, getUserOrders, createProduct, updateProduct, deleteProduct, createVoucher, listVouchers, updateVoucher, deleteVoucher, getProductById } from '../models/adminModel.js';
 
 // Users
 const listAllUsers = (params) => listUsers(params);
@@ -18,6 +18,8 @@ const createNewVoucher = (payload) => createVoucher(payload);
 const listAllVouchers = () => listVouchers();
 const updateExistingVoucher = (id, payload) => updateVoucher(id, payload);
 const deleteExistingVoucher = (id) => deleteVoucher(id);
+const getProductDetail = (id) => getProductById(id);
+
 
 export {
   listAllUsers,
@@ -27,6 +29,7 @@ export {
   createNewProduct,
   updateExistingProduct,
   deleteExistingProduct,
+  getProductDetail,
   createNewVoucher,
   listAllVouchers,
   updateExistingVoucher,
