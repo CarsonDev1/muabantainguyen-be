@@ -1,0 +1,144 @@
+settings:
+    get:
+        summary: Get public site settings (no auth required)
+        tags: [Public]
+        responses:
+            200:
+                description: Public settings retrieved successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                success:
+                                    type: boolean
+                                    example: true
+                                message:
+                                    type: string
+                                    example: Public settings retrieved successfully
+                                settings:
+                                    type: object
+                                    additionalProperties: true
+                                    example:
+                                        site_name: Muabantainguyen
+                                        site_logo: https://logo-url.com
+                                        site_banner: https://banner-url.com
+                                        contact_email: contact@shop.com
+                                        contact_phone: '0123456789'
+                                        seo_title: Muabantainguyen - Digital Products
+                                        seo_description: Description for SEO
+                                        default_currency: VND
+                                        maintenance_mode: false
+                                        allow_registration: true
+
+faqs:
+    get:
+        summary: Get public FAQs
+        tags: [Public]
+        responses:
+            200:
+                description: FAQs retrieved successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: FAQs retrieved successfully
+                                faqs:
+                                    type: array
+                                    items:
+                                        type: object
+                                        properties:
+                                            id:
+                                                type: string
+                                                format: uuid
+                                            question:
+                                                type: string
+                                            answer:
+                                                type: string
+            500:
+                description: Server error
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Failed to load FAQs
+                                error:
+                                    type: string
+
+announcements:
+    get:
+        summary: Get public announcements
+        tags: [Public]
+        responses:
+            200:
+                description: Announcements retrieved successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Announcements retrieved successfully
+                                announcements:
+                                    type: array
+                                    items:
+                                        type: object
+                                        properties:
+                                            id:
+                                                type: string
+                                                format: uuid
+                                            title:
+                                                type: string
+                                            content:
+                                                type: string
+            500:
+                description: Server error
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Failed to load announcements
+                                error:
+                                    type: string
+
+categories-tree:
+    get:
+        summary: Get public category tree
+        tags: [Public]
+        responses:
+            200:
+                description: Category tree retrieved successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Category tree retrieved successfully
+                                tree:
+                                    type: array
+                                    items:
+                                        $ref: '../components/schemas.yaml#/CategoryTree'
+            500:
+                description: Server error
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Failed to load categories
+                                error:
+                                    type: string

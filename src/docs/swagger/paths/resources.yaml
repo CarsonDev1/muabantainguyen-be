@@ -1,0 +1,39 @@
+list:
+    get:
+        summary: List purchased resources (auto-deleted after 30 days)
+        security:
+            - bearerAuth: []
+        tags: [User Resources]
+        parameters:
+            - name: page
+              in: query
+              schema:
+                  type: integer
+                  minimum: 1
+                  default: 1
+              description: Page number
+            - name: pageSize
+              in: query
+              schema:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 20
+              description: Items per page
+        responses:
+            200:
+                description: Resources retrieved successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Resources retrieved successfully
+                                items:
+                                    type: array
+                                    items:
+                                        $ref: '../components/schemas.yaml#/Resource'
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'

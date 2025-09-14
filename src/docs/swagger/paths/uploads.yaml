@@ -1,0 +1,220 @@
+images:
+    post:
+        summary: Upload single or multiple images
+        description: Upload 1 or more images, max 10 files, each file max 10MB
+        security:
+            - bearerAuth: []
+        tags: [File Upload]
+        requestBody:
+            required: true
+            content:
+                multipart/form-data:
+                    schema:
+                        type: object
+                        properties:
+                            files:
+                                type: array
+                                items:
+                                    type: string
+                                    format: binary
+                                description: Image files to upload (max 10 files)
+                            folder:
+                                type: string
+                                description: Subfolder in Cloudinary (optional)
+                                example: products
+                        required: [files]
+        responses:
+            201:
+                description: Upload successful
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                success:
+                                    type: boolean
+                                    example: true
+                                message:
+                                    type: string
+                                    example: Uploaded 3/3 files successfully
+                                data:
+                                    type: object
+                                    properties:
+                                        successful:
+                                            type: array
+                                            items:
+                                                $ref: '../components/schemas.yaml#/UploadResult'
+                                        failed:
+                                            type: array
+                                            items:
+                                                $ref: '../components/schemas.yaml#/UploadError'
+                                        total:
+                                            type: integer
+                                            example: 3
+                                        successCount:
+                                            type: integer
+                                            example: 3
+                                        failCount:
+                                            type: integer
+                                            example: 0
+            400:
+                description: Bad request - No files or validation error
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                success:
+                                    type: boolean
+                                    example: false
+                                message:
+                                    type: string
+                                    example: No files provided
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'
+
+avatar:
+    post:
+        summary: Upload avatar for user
+        description: Upload avatar, automatically resize to 200x200px and crop to face
+        security:
+            - bearerAuth: []
+        tags: [File Upload]
+        requestBody:
+            required: true
+            content:
+                multipart/form-data:
+                    schema:
+                        type: object
+                        properties:
+                            file:
+                                type: string
+                                format: binary
+                                description: Avatar image file
+                        required: [file]
+        responses:
+            201:
+                description: Avatar upload successful
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                success:
+                                    type: boolean
+                                    example: true
+                                message:
+                                    type: string
+                                    example: Avatar uploaded successfully
+                                data:
+                                    type: object
+                                    properties:
+                                        url:
+                                            type: string
+                                            example: https://res.cloudinary.com/demo/image/upload/avatar.jpg
+                                        public_id:
+                                            type: string
+                                            example: muabantainguyen/avatars/avatar_user123
+                                        width:
+                                            type: integer
+                                            example: 200
+                                        height:
+                                            type: integer
+                                            example: 200
+                                        format:
+                                            type: string
+                                            example: jpg
+                                        bytes:
+                                            type: integer
+                                            example: 15432
+            400:
+                description: Bad request - No file
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                success:
+                                    type: boolean
+                                    example: false
+                                message:
+                                    type: string
+                                    example: No avatar file provided
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'
+
+product:
+    post:
+        summary: Upload product images
+        description: Upload product images, max 5 files
+        security:
+            - bearerAuth: []
+        tags: [File Upload]
+        requestBody:
+            required: true
+            content:
+                multipart/form-data:
+                    schema:
+                        type: object
+                        properties:
+                            files:
+                                type: array
+                                items:
+                                    type: string
+                                    format: binary
+                                description: Product image files (max 5 files)
+                        required: [files]
+        responses:
+            201:
+                description: Product images upload successful
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                success:
+                                    type: boolean
+                                    example: true
+                                message:
+                                    type: string
+                                    example: Uploaded 3 product images successfully
+                                data:
+                                    type: object
+                                    properties:
+                                        images:
+                                            type: array
+                                            items:
+                                                type: object
+                                                properties:
+                                                    url:
+                                                        type: string
+                                                    public_id:
+                                                        type: string
+                                                    width:
+                                                        type: integer
+                                                    height:
+                                                        type: integer
+                                                    format:
+                                                        type: string
+                                                    bytes:
+                                                        type: integer
+                                                    originalName:
+                                                        type: string
+                                        count:
+                                            type: integer
+                                            example: 3
+            400:
+                description: Bad request - No files
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                success:
+                                    type: boolean
+                                    example: false
+                                message:
+                                    type: string
+                                    example: No product images provided
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'

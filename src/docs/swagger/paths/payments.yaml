@@ -1,0 +1,131 @@
+start:
+    post:
+        summary: Start payment for existing order
+        security:
+            - bearerAuth: []
+        tags: [Payments]
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            orderId:
+                                type: string
+                                format: uuid
+                                example: 550e8400-e29b-41d4-a716-446655440000
+                            amount:
+                                type: number
+                                example: 150000
+                        required: [orderId, amount]
+        responses:
+            201:
+                description: Payment initiated successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Payment initiated successfully
+                                transactionId:
+                                    type: string
+                                    format: uuid
+                                instructions:
+                                    $ref: '../components/schemas.yaml#/PaymentInstructions'
+            400:
+                $ref: '../components/responses.yaml#/BadRequest'
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'
+
+checkout:
+    post:
+        summary: Checkout cart and create payment in one step
+        security:
+            - bearerAuth: []
+        tags: [Payments]
+        responses:
+            201:
+                description: Checkout and payment initiated successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Checkout and payment initiated successfully
+                                orderId:
+                                    type: string
+                                    format: uuid
+                                transactionId:
+                                    type: string
+                                    format: uuid
+                                instructions:
+                                    $ref: '../components/schemas.yaml#/PaymentInstructions'
+            400:
+                description: Bad request - Cart is empty
+                content:
+                    application/json:
+                        schema:
+                            $ref: '../components/responses.yaml#/BadRequest'
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'
+
+webhook:
+    post:
+        summary: Sepay webhook receiver
+        tags: [Payments]
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            content:
+                                type: string
+                                example: ORD-ABC123
+                                description: Order reference code
+                            amount:
+                                type: number
+                                example: 150000
+                            status:
+                                type: string
+                                enum: [success, failed]
+                                example: success
+                            provider_tx_id:
+                                type: string
+                                example: TXN123456789
+                                description: Provider transaction ID
+        responses:
+            200:
+                description: Webhook processed successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Webhook processed successfully
+                                ok:
+                                    type: boolean
+                                    example: true
+            400:
+                $ref: '../components/responses.yaml#/BadRequest'
+            401:
+                description: Invalid signature
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                success:
+                                    type: boolean
+                                    example: false
+                                message:
+                                    type: string
+                                    example: Invalid signature

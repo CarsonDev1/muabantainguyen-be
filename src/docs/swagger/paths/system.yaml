@@ -1,0 +1,30 @@
+health:
+    get:
+        summary: Health check
+        tags: [System]
+        description: Check if the server and database connection are healthy
+        responses:
+            200:
+                description: System is healthy
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                status:
+                                    type: string
+                                    example: 'ok'
+                                    description: Health status of the system
+            500:
+                description: System is unhealthy - database connection failed
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                status:
+                                    type: string
+                                    example: 'error'
+                                message:
+                                    type: string
+                                    example: 'Database connection failed'

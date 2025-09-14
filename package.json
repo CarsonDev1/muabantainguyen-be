@@ -7,7 +7,9 @@
 	"scripts": {
 		"dev": "nodemon --watch src --ext js,json --exec node src/server.js",
 		"start": "node src/server.js",
-		"migrate": "node scripts/migrate.js"
+		"migrate": "node scripts/migrate.js",
+		"swagger": "node scripts/swagger.js",
+		"swagger-ui": "node scripts/swagger-ui.js"
 	},
 	"dependencies": {
 		"bcryptjs": "^2.4.3",
@@ -17,6 +19,7 @@
 		"dotenv": "^16.4.5",
 		"express": "^4.19.2",
 		"helmet": "^7.1.0",
+		"js-yaml": "^4.1.0",
 		"jsonwebtoken": "^9.0.2",
 		"morgan": "^1.10.0",
 		"multer": "^2.0.2",

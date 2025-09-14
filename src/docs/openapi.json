@@ -7,6 +7,454 @@
 	},
 	"servers": [{ "url": "http://localhost:4000" }],
 	"paths": {
+		"/api/wallet": {
+			"get": {
+				"summary": "Get wallet info and statistics",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"wallet": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"balance": { "type": "number", "example": 500000 },
+												"total_deposited": { "type": "number", "example": 1000000 },
+												"total_spent": { "type": "number", "example": 500000 },
+												"created_at": { "type": "string", "format": "date-time" },
+												"updated_at": { "type": "string", "format": "date-time" }
+											}
+										},
+										"stats": {
+											"type": "object",
+											"properties": {
+												"balance": { "type": "number" },
+												"total_deposits": { "type": "number" },
+												"total_purchases": { "type": "number" },
+												"total_refunds": { "type": "number" },
+												"deposit_count": { "type": "integer" },
+												"purchase_count": { "type": "integer" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/deposit": {
+			"post": {
+				"summary": "Create deposit request",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"amount": {
+										"type": "number",
+										"minimum": 10000,
+										"maximum": 50000000,
+										"example": 100000
+									},
+									"paymentMethod": { "type": "string", "enum": ["sepay", "momo"], "default": "sepay" }
+								},
+								"required": ["amount"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Deposit request created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"requestId": { "type": "string", "format": "uuid" },
+										"amount": { "type": "number" },
+										"paymentCode": { "type": "string", "example": "DEP12345ABC" },
+										"paymentMethod": { "type": "string" },
+										"expiresAt": { "type": "string", "format": "date-time" },
+										"instructions": {
+											"type": "object",
+											"properties": {
+												"amount": { "type": "number" },
+												"code": { "type": "string" },
+												"method": { "type": "string" },
+												"bankAccount": { "type": "string" },
+												"bankName": { "type": "string" },
+												"accountNumber": { "type": "string" },
+												"accountName": { "type": "string" },
+												"note": { "type": "string" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Invalid amount or parameters" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/deposit/{id}": {
+			"get": {
+				"summary": "Check deposit request status",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"deposit": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"amount": { "type": "number" },
+												"paymentCode": { "type": "string" },
+												"status": {
+													"type": "string",
+													"enum": ["pending", "completed", "expired", "cancelled"]
+												},
+												"paymentMethod": { "type": "string" },
+												"expiresAt": { "type": "string", "format": "date-time" },
+												"completedAt": { "type": "string", "format": "date-time" },
+												"createdAt": { "type": "string", "format": "date-time" },
+												"isExpired": { "type": "boolean" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Deposit request not found" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/deposits": {
+			"get": {
+				"summary": "Get deposit history",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 20 } },
+					{
+						"name": "status",
+						"in": "query",
+						"schema": { "type": "string", "enum": ["pending", "completed", "expired", "cancelled"] }
+					}
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/transactions": {
+			"get": {
+				"summary": "Get wallet transaction history",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 20 } },
+					{
+						"name": "type",
+						"in": "query",
+						"schema": { "type": "string", "enum": ["deposit", "withdraw", "purchase", "refund"] }
+					},
+					{ "name": "startDate", "in": "query", "schema": { "type": "string", "format": "date" } },
+					{ "name": "endDate", "in": "query", "schema": { "type": "string", "format": "date" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/pay": {
+			"post": {
+				"summary": "Pay with wallet balance",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"amount": { "type": "number", "minimum": 1 },
+									"description": { "type": "string" },
+									"referenceType": { "type": "string", "example": "order" },
+									"referenceId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["amount", "description"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Payment successful" },
+					"400": { "description": "Insufficient balance or invalid parameters" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/webhook": {
+			"post": {
+				"summary": "Webhook for deposit payment confirmation",
+				"tags": ["Wallet"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"content": { "type": "string", "description": "Payment code" },
+									"amount": { "type": "number" },
+									"status": { "type": "string", "enum": ["success", "failed"] },
+									"provider_tx_id": { "type": "string" }
+								},
+								"required": ["content", "amount", "status"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Webhook processed successfully" },
+					"400": { "description": "Invalid webhook data" }
+				}
+			}
+		},
+		"/api/wallet/admin/adjust": {
+			"post": {
+				"summary": "Admin: Manually adjust user wallet balance",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Wallet"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"userId": { "type": "string", "format": "uuid" },
+									"amount": {
+										"type": "number",
+										"description": "Positive to add, negative to subtract"
+									},
+									"description": { "type": "string", "example": "Manual adjustment by admin" }
+								},
+								"required": ["userId", "amount"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Wallet adjusted successfully" },
+					"400": { "description": "Invalid parameters or insufficient balance" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/wallet/admin/{userId}": {
+			"get": {
+				"summary": "Admin: Get user wallet info",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Wallet"],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string", "format": "uuid" }
+					}
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/wallet/admin/refund": {
+			"post": {
+				"summary": "Admin: Process refund to user wallet",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Wallet"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"userId": { "type": "string", "format": "uuid" },
+									"amount": { "type": "number", "minimum": 1 },
+									"description": { "type": "string" },
+									"referenceType": { "type": "string" },
+									"referenceId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["userId", "amount"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Refund processed successfully" },
+					"400": { "description": "Invalid parameters" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/orders/checkout": {
+			"post": {
+				"summary": "Enhanced checkout with wallet payment support",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
+				"requestBody": {
+					"required": false,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"paymentMethod": {
+										"type": "string",
+										"enum": ["sepay", "momo", "wallet"],
+										"default": "sepay"
+									},
+									"useWallet": {
+										"type": "boolean",
+										"default": false,
+										"description": "Use wallet balance for payment"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Order created successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"orderId": { "type": "string", "format": "uuid" },
+										"total": { "type": "number" },
+										"paymentMethod": { "type": "string" },
+										"status": { "type": "string", "enum": ["pending", "paid"] }
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Cart empty or insufficient wallet balance" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/orders/stats": {
+			"get": {
+				"summary": "Get user order statistics",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"stats": {
+											"type": "object",
+											"properties": {
+												"total_orders": { "type": "integer" },
+												"pending_orders": { "type": "integer" },
+												"paid_orders": { "type": "integer" },
+												"refunded_orders": { "type": "integer" },
+												"total_spent": { "type": "number" },
+												"wallet_payments": { "type": "integer" },
+												"external_payments": { "type": "integer" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/orders/{id}/refund": {
+			"post": {
+				"summary": "Admin: Refund order and return money to user wallet",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Orders"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"reason": { "type": "string", "example": "Product unavailable" }
+								},
+								"required": ["reason"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Order refunded successfully" },
+					"400": { "description": "Invalid order status or already refunded" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
 		"/api/admin/admins": {
 			"get": {
 				"summary": "List all admins with roles and permissions",

@@ -1,0 +1,193 @@
+cart:
+    get:
+        summary: Get current user's cart
+        security:
+            - bearerAuth: []
+        tags: [Cart]
+        responses:
+            200:
+                description: Cart retrieved successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Cart retrieved successfully
+                                cartId:
+                                    type: string
+                                    format: uuid
+                                items:
+                                    type: array
+                                    items:
+                                        $ref: '../components/schemas.yaml#/CartItem'
+                                total:
+                                    type: number
+                                    example: 150000
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'
+
+add:
+    post:
+        summary: Add item to cart
+        security:
+            - bearerAuth: []
+        tags: [Cart]
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            productId:
+                                type: string
+                                format: uuid
+                                example: 550e8400-e29b-41d4-a716-446655440000
+                            quantity:
+                                type: integer
+                                minimum: 1
+                                example: 2
+                        required: [productId, quantity]
+        responses:
+            200:
+                description: Item added to cart successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Item added to cart successfully
+                                cartId:
+                                    type: string
+                                    format: uuid
+                                items:
+                                    type: array
+                                    items:
+                                        $ref: '../components/schemas.yaml#/CartItem'
+                                total:
+                                    type: number
+                                    example: 200000
+            400:
+                $ref: '../components/responses.yaml#/BadRequest'
+            404:
+                $ref: '../components/responses.yaml#/NotFound'
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'
+
+update:
+    put:
+        summary: Update item quantity in cart
+        security:
+            - bearerAuth: []
+        tags: [Cart]
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            productId:
+                                type: string
+                                format: uuid
+                            quantity:
+                                type: integer
+                                minimum: 1
+                                example: 3
+                        required: [productId, quantity]
+        responses:
+            200:
+                description: Cart item updated successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Cart item updated successfully
+                                cartId:
+                                    type: string
+                                    format: uuid
+                                items:
+                                    type: array
+                                    items:
+                                        $ref: '../components/schemas.yaml#/CartItem'
+                                total:
+                                    type: number
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'
+
+remove:
+    post:
+        summary: Remove item from cart
+        security:
+            - bearerAuth: []
+        tags: [Cart]
+        requestBody:
+            required: true
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            productId:
+                                type: string
+                                format: uuid
+                        required: [productId]
+        responses:
+            200:
+                description: Item removed from cart successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Item removed from cart successfully
+                                cartId:
+                                    type: string
+                                    format: uuid
+                                items:
+                                    type: array
+                                    items:
+                                        $ref: '../components/schemas.yaml#/CartItem'
+                                total:
+                                    type: number
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'
+
+clear:
+    post:
+        summary: Clear all items from cart
+        security:
+            - bearerAuth: []
+        tags: [Cart]
+        responses:
+            200:
+                description: Cart cleared successfully
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                message:
+                                    type: string
+                                    example: Cart cleared successfully
+                                cartId:
+                                    type: string
+                                    format: uuid
+                                items:
+                                    type: array
+                                    items: {}
+                                    example: []
+                                total:
+                                    type: number
+                                    example: 0
+            401:
+                $ref: '../components/responses.yaml#/Unauthorized'
