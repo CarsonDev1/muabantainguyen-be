@@ -1,5 +1,6 @@
 'use strict';
 
+import { pool } from '../setup/db.js';
 import {
   getUserWallet,
   createDepositRequest,
