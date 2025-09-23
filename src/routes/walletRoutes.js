@@ -3,6 +3,7 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { adminOnly } from '../middleware/adminMiddleware.js';
+import { webhookAuthMiddleware } from '../middleware/webhookAuthMiddleware.js';
 import {
   getWalletController,
   createDepositController,
@@ -26,8 +27,8 @@ router.get('/deposits', authMiddleware, getDepositsController);
 router.get('/transactions', authMiddleware, getTransactionsController);
 router.post('/pay', authMiddleware, payWithWalletController);
 
-// Webhook route (no auth)
-router.post('/webhook', express.json({ type: '*/*' }), walletWebhookController);
+// Webhook route (with API key auth)
+router.post('/webhook', express.json({ type: '*/*' }), webhookAuthMiddleware, walletWebhookController);
 
 // Admin wallet routes
 router.post('/admin/adjust', adminOnly, adminAdjustWalletController);

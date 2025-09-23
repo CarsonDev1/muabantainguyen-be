@@ -234,8 +234,19 @@
 		},
 		"/api/wallet/webhook": {
 			"post": {
-				"summary": "Webhook for deposit payment confirmation",
+				"summary": "Webhook for deposit payment confirmation (SePay)",
+				"description": "Webhook endpoint for SePay to notify payment confirmation. Requires API Key authentication.",
+				"security": [{ "apiKeyAuth": [] }],
 				"tags": ["Wallet"],
+				"parameters": [
+					{
+						"name": "Authorization",
+						"in": "header",
+						"required": true,
+						"schema": { "type": "string" },
+						"description": "API Key authentication in format: 'Apikey YOUR_API_KEY'"
+					}
+				],
 				"requestBody": {
 					"required": true,
 					"content": {
@@ -255,7 +266,9 @@
 				},
 				"responses": {
 					"200": { "description": "Webhook processed successfully" },
-					"400": { "description": "Invalid webhook data" }
+					"400": { "description": "Invalid webhook data" },
+					"401": { "description": "Invalid or missing API key" },
+					"500": { "description": "Webhook authentication not configured" }
 				}
 			}
 		},
@@ -1146,6 +1159,44 @@
 				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
 			}
 		},
+		"/api/resources/settings": {
+			"get": {
+				"summary": "Get public site settings (alternative endpoint)",
+				"tags": ["Public"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"settings": {
+											"type": "object",
+											"additionalProperties": true,
+											"example": {
+												"site_name": "My Shop",
+												"site_logo": "https://logo-url.com",
+												"site_banner": "https://banner-url.com",
+												"contact_email": "contact@shop.com",
+												"contact_phone": "0123456789",
+												"seo_title": "My Shop - Best Digital Products",
+												"seo_description": "Description for SEO",
+												"default_currency": "VND",
+												"maintenance_mode": false,
+												"allow_registration": true
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/api/payments/start": {
 			"post": {
 				"summary": "Start Sepay payment for existing order",
@@ -1196,21 +1247,102 @@
 			"get": {
 				"summary": "Public: get category tree",
 				"tags": ["Public"],
-				"responses": { "200": { "description": "OK" } }
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"tree": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string" },
+													"slug": { "type": "string" },
+													"parent_id": { "type": "string", "format": "uuid" },
+													"children": {
+														"type": "array",
+														"items": { "$ref": "#/components/schemas/Category" }
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/public/faqs": {
 			"get": {
 				"summary": "Public: get FAQs",
 				"tags": ["Public"],
-				"responses": { "200": { "description": "OK" } }
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"faqs": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "integer" },
+													"question": { "type": "string" },
+													"answer": { "type": "string" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/public/announcements": {
 			"get": {
 				"summary": "Public: get announcements",
 				"tags": ["Public"],
-				"responses": { "200": { "description": "OK" } }
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"announcements": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "integer" },
+													"title": { "type": "string" },
+													"content": { "type": "string" },
+													"image": { "type": "string" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		},
 		"/api/cart": {
@@ -1788,6 +1920,518 @@
 					"401": { "description": "Unauthorized" }
 				}
 			}
+		},
+		"/api/uploads/announcement": {
+			"post": {
+				"summary": "Upload announcement image",
+				"description": "Upload ảnh thông báo, 1 file duy nhất",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["File Upload"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"file": {
+										"type": "string",
+										"format": "binary",
+										"description": "File ảnh thông báo"
+									}
+								},
+								"required": ["file"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Announcement image upload thành công" },
+					"400": { "description": "Bad request - No file" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/admin/faqs": {
+			"post": {
+				"summary": "Admin: Create new FAQ",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin FAQ"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"question": { "type": "string", "example": "How to create an account?" },
+									"answer": { "type": "string", "example": "Click on the register button..." },
+									"is_active": { "type": "boolean", "default": true }
+								},
+								"required": ["question", "answer"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "FAQ created successfully" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/faqs/{id}": {
+			"put": {
+				"summary": "Admin: Update FAQ",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin FAQ"],
+				"parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"question": { "type": "string" },
+									"answer": { "type": "string" },
+									"is_active": { "type": "boolean" }
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "FAQ updated successfully" },
+					"403": { "description": "Admin access required" }
+				}
+			},
+			"delete": {
+				"summary": "Admin: Delete FAQ",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin FAQ"],
+				"parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+				"responses": {
+					"200": { "description": "FAQ deleted successfully" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/announcements": {
+			"get": {
+				"summary": "Admin: Get all announcements",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Announcements"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"announcements": {
+											"type": "array",
+											"items": { "$ref": "#/components/schemas/Announcement" }
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Admin access required" }
+				}
+			},
+			"post": {
+				"summary": "Admin: Create new announcement",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Announcements"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"title": { "type": "string", "example": "System Maintenance Notice" },
+									"content": {
+										"type": "string",
+										"example": "The system will be down for maintenance..."
+									},
+									"image": {
+										"type": "string",
+										"example": "https://cloudinary.com/image/upload/announcement.jpg",
+										"description": "URL of the announcement image"
+									},
+									"is_active": { "type": "boolean", "default": true }
+								},
+								"required": ["title", "content"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Announcement created successfully" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/announcements/{id}": {
+			"put": {
+				"summary": "Admin: Update announcement",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Announcements"],
+				"parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"title": { "type": "string" },
+									"content": { "type": "string" },
+									"image": {
+										"type": "string",
+										"description": "URL of the announcement image"
+									},
+									"is_active": { "type": "boolean" }
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Announcement updated successfully" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/public/announcements": {
+			"get": {
+				"summary": "Public: get announcements",
+				"tags": ["Public"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"announcements": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "integer" },
+													"title": { "type": "string" },
+													"content": { "type": "string" },
+													"image": { "type": "string" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/public/categories/slug/{slug}": {
+			"get": {
+				"summary": "Public: Get category by slug",
+				"tags": ["Public"],
+				"parameters": [
+					{
+						"name": "slug",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string" },
+						"description": "Category slug",
+						"example": "mua-tai-khoan"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Category retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"category": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"name": { "type": "string" },
+												"slug": { "type": "string" },
+												"parent_id": { "type": "string", "format": "uuid" },
+												"parent_name": { "type": "string" },
+												"parent_slug": { "type": "string" },
+												"product_count": { "type": "integer" },
+												"children": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"id": { "type": "string", "format": "uuid" },
+															"name": { "type": "string" },
+															"slug": { "type": "string" },
+															"parent_id": { "type": "string", "format": "uuid" }
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Category not found" },
+					"500": { "description": "Internal server error" }
+				}
+			}
+		},
+		"/api/public/categories/{id}": {
+			"get": {
+				"summary": "Public: Get category by ID",
+				"tags": ["Public"],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string", "format": "uuid" },
+						"description": "Category ID"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Category retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"category": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"name": { "type": "string" },
+												"slug": { "type": "string" },
+												"parent_id": { "type": "string", "format": "uuid" },
+												"parent_name": { "type": "string" },
+												"parent_slug": { "type": "string" },
+												"product_count": { "type": "integer" },
+												"children": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"id": { "type": "string", "format": "uuid" },
+															"name": { "type": "string" },
+															"slug": { "type": "string" },
+															"parent_id": { "type": "string", "format": "uuid" }
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Category not found" },
+					"500": { "description": "Internal server error" }
+				}
+			}
+		},
+		"/api/public/categories/{id}/products": {
+			"get": {
+				"summary": "Public: Get products by category ID",
+				"tags": ["Public"],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string", "format": "uuid" },
+						"description": "Category ID"
+					},
+					{
+						"name": "page",
+						"in": "query",
+						"schema": { "type": "integer", "default": 1, "minimum": 1 },
+						"description": "Page number"
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 },
+						"description": "Number of items per page"
+					},
+					{
+						"name": "sort",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"default": "created_at",
+							"enum": ["created_at", "name", "price"]
+						},
+						"description": "Sort field"
+					},
+					{
+						"name": "order",
+						"in": "query",
+						"schema": { "type": "string", "default": "desc", "enum": ["asc", "desc"] },
+						"description": "Sort order"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Products retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"products": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string" },
+													"slug": { "type": "string" },
+													"description": { "type": "string" },
+													"price": { "type": "number" },
+													"stock": { "type": "integer" },
+													"image_url": { "type": "string" },
+													"category_id": { "type": "string", "format": "uuid" },
+													"category_name": { "type": "string" },
+													"category_slug": { "type": "string" },
+													"is_active": { "type": "boolean" },
+													"created_at": { "type": "string", "format": "date-time" },
+													"updated_at": { "type": "string", "format": "date-time" }
+												}
+											}
+										},
+										"pagination": {
+											"type": "object",
+											"properties": {
+												"page": { "type": "integer" },
+												"limit": { "type": "integer" },
+												"total": { "type": "integer" },
+												"totalPages": { "type": "integer" },
+												"hasNext": { "type": "boolean" },
+												"hasPrev": { "type": "boolean" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Category not found" },
+					"500": { "description": "Internal server error" }
+				}
+			}
+		},
+		"/api/public/categories/slug/{slug}/products": {
+			"get": {
+				"summary": "Public: Get products by category slug",
+				"tags": ["Public"],
+				"parameters": [
+					{
+						"name": "slug",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string" },
+						"description": "Category slug",
+						"example": "mua-tai-khoan"
+					},
+					{
+						"name": "page",
+						"in": "query",
+						"schema": { "type": "integer", "default": 1, "minimum": 1 },
+						"description": "Page number"
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 },
+						"description": "Number of items per page"
+					},
+					{
+						"name": "sort",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"default": "created_at",
+							"enum": ["created_at", "name", "price"]
+						},
+						"description": "Sort field"
+					},
+					{
+						"name": "order",
+						"in": "query",
+						"schema": { "type": "string", "default": "desc", "enum": ["asc", "desc"] },
+						"description": "Sort order"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Products retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"products": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string" },
+													"slug": { "type": "string" },
+													"description": { "type": "string" },
+													"price": { "type": "number" },
+													"stock": { "type": "integer" },
+													"image_url": { "type": "string" },
+													"category_id": { "type": "string", "format": "uuid" },
+													"category_name": { "type": "string" },
+													"category_slug": { "type": "string" },
+													"is_active": { "type": "boolean" },
+													"created_at": { "type": "string", "format": "date-time" },
+													"updated_at": { "type": "string", "format": "date-time" }
+												}
+											}
+										},
+										"pagination": {
+											"type": "object",
+											"properties": {
+												"page": { "type": "integer" },
+												"limit": { "type": "integer" },
+												"total": { "type": "integer" },
+												"totalPages": { "type": "integer" },
+												"hasNext": { "type": "boolean" },
+												"hasPrev": { "type": "boolean" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Category not found" },
+					"500": { "description": "Internal server error" }
+				}
+			}
 		}
 	},
 	"components": {
@@ -1796,6 +2440,12 @@
 				"type": "http",
 				"scheme": "bearer",
 				"bearerFormat": "JWT"
+			},
+			"apiKeyAuth": {
+				"type": "apiKey",
+				"in": "header",
+				"name": "Authorization",
+				"description": "API Key authentication for webhooks. Format: 'Apikey YOUR_API_KEY'"
 			}
 		},
 		"schemas": {
@@ -1885,6 +2535,45 @@
 					"description": { "type": "string" },
 					"module": { "type": "string", "example": "products" }
 				}
+			},
+			"Category": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"name": { "type": "string" },
+					"slug": { "type": "string" },
+					"parent_id": { "type": "string", "format": "uuid", "nullable": true },
+					"image": { "type": "string", "nullable": true },
+					"created_at": { "type": "string", "format": "date-time" },
+					"updated_at": { "type": "string", "format": "date-time" }
+				}
+			},
+			"FAQ": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "integer" },
+					"question": { "type": "string" },
+					"answer": { "type": "string" },
+					"is_active": { "type": "boolean" },
+					"created_at": { "type": "string", "format": "date-time" },
+					"updated_at": { "type": "string", "format": "date-time" }
+				}
+			},
+			"Announcement": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "integer" },
+					"title": { "type": "string" },
+					"content": { "type": "string" },
+					"image": { "type": "string" },
+					"is_active": { "type": "boolean" },
+					"created_at": { "type": "string", "format": "date-time" },
+					"updated_at": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Available after migration"
+					}
+				}
 			}
 		}
 	},
@@ -1894,6 +2583,7 @@
 		{ "name": "Products", "description": "Public product endpoints" },
 		{ "name": "Cart", "description": "Shopping cart management" },
 		{ "name": "Orders", "description": "Order management" },
+		{ "name": "Admin Orders", "description": "Admin order management" },
 		{ "name": "Payments", "description": "Payment processing" },
 		{ "name": "Vouchers", "description": "Voucher/coupon system" },
 		{ "name": "Security", "description": "2FA and security features" },
@@ -1907,6 +2597,10 @@
 		{ "name": "Admin Products", "description": "Admin product management" },
 		{ "name": "Admin Categories", "description": "Admin category management" },
 		{ "name": "Admin Users", "description": "Admin user management" },
-		{ "name": "Admin Vouchers", "description": "Admin voucher management" }
+		{ "name": "Admin Vouchers", "description": "Admin voucher management" },
+		{ "name": "Admin FAQ", "description": "Admin FAQ management" },
+		{ "name": "Admin Announcements", "description": "Admin announcements management" },
+		{ "name": "Wallet", "description": "User wallet functionality" },
+		{ "name": "Admin Wallet", "description": "Admin wallet management" }
 	]
 }

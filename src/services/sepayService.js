@@ -1,6 +1,7 @@
 'use strict';
 
 import crypto from 'crypto';
+import 'dotenv/config';
 import { createTransaction, updateTransactionById, findTransactionByMetaCode, markOrderPaid } from '../models/transactionModel.js';
 import { fulfillOrder } from './fulfillmentService.js';
 

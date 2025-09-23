@@ -14,6 +14,7 @@ import {
   deleteExistingVoucher,
   getProductDetail,
 } from '../services/adminService.js';
+import { listCatalog } from '../services/productService.js';
 
 async function listUsersController(req, res) {
   try {
@@ -139,6 +140,24 @@ async function deleteVoucherController(req, res) {
   }
 }
 
+async function listProductsController(req, res) {
+  try {
+    const { q, categoryId, minPrice, maxPrice, inStock, page, pageSize } = req.query;
+    const result = await listCatalog({
+      q: q || undefined,
+      categoryId: categoryId || undefined,
+      minPrice: minPrice != null ? Number(minPrice) : undefined,
+      maxPrice: maxPrice != null ? Number(maxPrice) : undefined,
+      inStock: inStock === 'true' ? true : undefined,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
+    return res.json({ message: 'Products retrieved successfully', ...result });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to list products', error: err.message });
+  }
+}
+
 async function getProductController(req, res) {
   try {
     const { id } = req.params;
@@ -169,6 +188,7 @@ export {
   listUsersController,
   setBlockController,
   userOrdersController,
+  listProductsController,
   createProductController,
   updateProductController,
   deleteProductController,

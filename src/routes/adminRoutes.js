@@ -3,11 +3,19 @@
 import express from 'express';
 import { adminOnly } from '../middleware/adminMiddleware.js';
 import { pool } from '../setup/db.js';
-import { createCategoryController, updateCategoryController, deleteCategoryController, getCategoryTreeController } from '../controllers/adminCategoryController.js';
+import {
+  createCategoryController,
+  updateCategoryController,
+  deleteCategoryController,
+  getCategoryTreeController,
+  getCategoryController,
+  getCategoryBySlugController
+} from '../controllers/adminCategoryController.js';
 import {
   listUsersController,
   setBlockController,
   userOrdersController,
+  listProductsController,
   createProductController,
   updateProductController,
   deleteProductController,
@@ -41,6 +49,7 @@ router.put('/users/:id/block', adminOnly, setBlockController);
 router.get('/users/:id/orders', adminOnly, userOrdersController);
 
 // Products
+router.get('/products', adminOnly, listProductsController);
 router.post('/products', adminOnly, createProductController);
 router.put('/products/:id', adminOnly, updateProductController);
 router.delete('/products/:id', adminOnly, deleteProductController);
@@ -51,6 +60,8 @@ router.post('/categories', adminOnly, createCategoryController);
 router.put('/categories/:id', adminOnly, updateCategoryController);
 router.delete('/categories/:id', adminOnly, deleteCategoryController);
 router.get('/categories/tree', adminOnly, getCategoryTreeController);
+router.get('/categories/:id', adminOnly, getCategoryController);
+router.get('/categories/slug/:slug', adminOnly, getCategoryBySlugController);
 
 // Vouchers
 router.post('/vouchers', adminOnly, createVoucherController);
@@ -74,15 +85,39 @@ router.delete('/faqs/:id', adminOnly, async (req, res) => {
 });
 
 // Announcements CRUD
+router.get('/announcements', adminOnly, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, title, content, image, is_active, created_at 
+     FROM announcements 
+     ORDER BY created_at DESC`
+  );
+  res.json({ announcements: rows });
+});
+
 router.post('/announcements', adminOnly, async (req, res) => {
-  const { title, content, is_active } = req.body;
-  const { rows } = await pool.query(`INSERT INTO announcements (title, content, is_active) VALUES ($1, $2, COALESCE($3, TRUE)) RETURNING id`, [title, content, is_active]);
+  const { title, content, is_active, image } = req.body;
+  const { rows } = await pool.query(
+    `INSERT INTO announcements (title, content, is_active, image) 
+     VALUES ($1, $2, COALESCE($3, TRUE), $4) 
+     RETURNING id`,
+    [title, content, is_active, image]
+  );
   res.status(201).json({ id: rows[0].id });
 });
+
 router.put('/announcements/:id', adminOnly, async (req, res) => {
-  await pool.query(`UPDATE announcements SET title = COALESCE($2, title), content = COALESCE($3, content), is_active = COALESCE($4, is_active) WHERE id = $1`, [req.params.id, req.body.title || null, req.body.content || null, req.body.is_active]);
+  await pool.query(
+    `UPDATE announcements 
+     SET title = COALESCE($2, title), 
+         content = COALESCE($3, content), 
+         is_active = COALESCE($4, is_active),
+         image = COALESCE($5, image)
+     WHERE id = $1`,
+    [req.params.id, req.body.title || null, req.body.content || null, req.body.is_active, req.body.image || null]
+  );
   res.json({ success: true });
 });
+
 router.delete('/announcements/:id', adminOnly, async (req, res) => {
   await pool.query(`DELETE FROM announcements WHERE id = $1`, [req.params.id]);
   res.json({ success: true });
@@ -115,11 +150,8 @@ router.get('/permissions', requirePermission('admins.view'), listPermissionsCont
 router.get('/settings', requirePermission('settings.view'), getAllSettingsController);
 router.put('/settings', requirePermission('settings.edit'), updateSettingsController);
 
-// Update existing product routes với permissions
-router.get('/products/:id', requirePermission('products.view'), getProductController);
-router.post('/products', requirePermission('products.create'), createProductController);
-router.put('/products/:id', requirePermission('products.edit'), updateProductController);
-router.delete('/products/:id', requirePermission('products.delete'), deleteProductController);
+// Note: Product routes are defined above with adminOnly middleware
+// If you want to use permission-based middleware instead, replace adminOnly with requirePermission
 
 export default router;
 

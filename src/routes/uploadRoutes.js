@@ -167,4 +167,39 @@ router.post('/product', authMiddleware, upload.array('files', 5), async (req, re
   }
 });
 
+// POST /api/uploads/announcement - Upload announcement image (single file)
+router.post('/announcement', authMiddleware, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No announcement image provided'
+      });
+    }
+
+    const cloudinaryFolder = `${process.env.CLOUDINARY_FOLDER || 'muabantainguyen'}/announcements`;
+    const result = await uploadBuffer(req.file.buffer, cloudinaryFolder);
+
+    return res.status(201).json({
+      success: true,
+      message: 'Announcement image uploaded successfully',
+      data: {
+        url: result.secure_url,
+        public_id: result.public_id,
+        width: result.width,
+        height: result.height,
+        format: result.format,
+        bytes: result.bytes
+      }
+    });
+
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: 'Announcement image upload failed',
+      error: err.message
+    });
+  }
+});
+
 export default router;

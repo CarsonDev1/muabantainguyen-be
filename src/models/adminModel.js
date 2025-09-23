@@ -77,11 +77,14 @@ async function getUserOrders(userId) {
 }
 
 // Products
-async function createProduct({ name, slug, description, price, stock, imageUrl, categoryId }) {
+async function createProduct({ name, slug, description, price, stock, imageUrl, categoryId, category_id }) {
+  // Use categoryId or category_id, whichever is provided
+  const category = categoryId || category_id;
+
   const { rows } = await pool.query(
     `INSERT INTO products (name, slug, description, price, stock, image_url, category_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-    [name, slug, description || null, price, stock || 0, imageUrl || null, categoryId || null]
+    [name, slug, description || null, price, stock || 0, imageUrl || null, category || null]
   );
   return rows[0].id;
 }
@@ -101,12 +104,22 @@ async function updateProduct(id, fields) {
   const updates = [];
   const params = [id];
   let idx = 2;
+
   for (const [key, value] of Object.entries(fields)) {
-    const col = key === 'imageUrl' ? 'image_url' : key;
+    let col = key;
+
+    // Handle field name mappings
+    if (key === 'imageUrl') {
+      col = 'image_url';
+    } else if (key === 'categoryId' || key === 'category_id') {
+      col = 'category_id';
+    }
+
     updates.push(`${col} = $${idx}`);
     params.push(value);
     idx++;
   }
+
   if (!updates.length) return;
   await pool.query(`UPDATE products SET ${updates.join(', ')} WHERE id = $1`, params);
 }
