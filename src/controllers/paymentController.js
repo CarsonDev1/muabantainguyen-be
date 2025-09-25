@@ -1,6 +1,7 @@
 'use strict';
 
 import { createSepayTransaction, getPaymentInstructions, verifySepaySignature, handleSepayWebhook } from '../services/sepayService.js';
+import { handleDepositWebhook as handleWalletDepositWebhook } from '../services/walletService.js';
 import { checkout } from '../services/orderService.js';
 
 async function startPaymentController(req, res) {
@@ -30,7 +31,14 @@ async function checkoutAndCreatePaymentController(req, res) {
 async function sepayWebhookController(req, res) {
   try {
     if (!verifySepaySignature(req)) return res.status(401).json({ message: 'Invalid signature' });
-    const result = await handleSepayWebhook(req.body);
+    const body = req.body;
+    // If content contains a DEP code, forward to wallet deposit handler as well
+    const rawContent = body.content || body.code || body.description || '';
+    const depMatch = String(rawContent).toUpperCase().match(/DEP[A-Z0-9]+/);
+    let result = await handleSepayWebhook(body);
+    if (depMatch) {
+      try { await handleWalletDepositWebhook(body); } catch (e) { /* swallow to not fail main webhook */ }
+    }
     return res.json({ message: 'Webhook processed successfully', ...result });
   } catch (err) {
     return res.status(400).json({ message: 'Webhook error', error: err.message });

@@ -1,4 +1,5 @@
 'use strict';
+import 'dotenv/config';
 
 import { pool } from '../setup/db.js';
 import {
@@ -108,15 +109,38 @@ function getPaymentInstructions({ amount, code, method }) {
 
   switch (method) {
     case 'sepay':
-      instructions.bankAccount = process.env.SEPAY_ACCOUNT || 'Thông tin tài khoản ngân hàng';
-      instructions.bankName = 'Techcombank';
-      instructions.accountNumber = '19037856172016';
-      instructions.accountName = 'NGUYEN VAN A';
+      instructions.bankAccount = process.env.SEPAY_ACCOUNT || '';
+      instructions.bankName = process.env.SEPAY_BANK_NAME || '';
+      instructions.accountNumber = process.env.SEPAY_ACCOUNT_NUMBER || '';
+      instructions.accountName = process.env.SEPAY_ACCOUNT_NAME || '';
+      // QR generation strategy
+      // Strategy A: SePay QR service (qr.sepay.vn) if configured
+      if (
+        process.env.SEPAY_QR_PROVIDER === 'sepay' &&
+        process.env.SEPAY_QR_ACC &&
+        process.env.SEPAY_BANK_SHORT
+      ) {
+        const qrAcc = encodeURIComponent(String(process.env.SEPAY_QR_ACC));
+        const bankShort = encodeURIComponent(String(process.env.SEPAY_BANK_SHORT)); // e.g. ACB, TCB
+        const desc = encodeURIComponent(String(code));
+        const amt = Number(amount) > 0 ? `&amount=${Number(amount)}` : '';
+        const template = process.env.SEPAY_QR_TEMPLATE || 'compact';
+        instructions.qrUrl = `https://qr.sepay.vn/img?acc=${qrAcc}&bank=${bankShort}${amt}&des=${desc}&template=${template}`;
+      }
+      // Strategy B: VietQR (fallback) if BIN configured
+      else if (process.env.SEPAY_BANK_BIN && instructions.accountNumber && instructions.accountName) {
+        const bin = process.env.SEPAY_BANK_BIN;
+        const acc = encodeURIComponent(String(instructions.accountNumber));
+        const addInfo = encodeURIComponent(String(code));
+        const accName = encodeURIComponent(String(instructions.accountName));
+        const amt = Number(amount) > 0 ? `&amount=${Number(amount)}` : '';
+        instructions.qrUrl = `https://img.vietqr.io/image/${bin}-${acc}-print.png?addInfo=${addInfo}&accountName=${accName}${amt}`;
+      }
       break;
 
     case 'momo':
-      instructions.momoNumber = process.env.MOMO_ACCOUNT || '0123456789';
-      instructions.momoName = 'NGUYEN VAN A';
+      instructions.momoNumber = process.env.MOMO_ACCOUNT || '';
+      instructions.momoName = process.env.MOMO_NAME || '';
       break;
 
     default:
@@ -128,14 +152,23 @@ function getPaymentInstructions({ amount, code, method }) {
 
 // Xử lý webhook nạp tiền thành công
 async function handleDepositWebhook(payload) {
-  const { content, amount, status, provider_tx_id } = payload;
+  const { amount, status, provider_tx_id } = payload;
+  const rawContent = payload.content || payload.code || payload.description || '';
 
   if (status !== 'success') {
     return { success: false, message: 'Payment not successful' };
   }
 
+  // Trích xuất mã DEPxxxxx từ nội dung dài (VD: "DEPxxxx FT... GD ...")
+  const match = String(rawContent).toUpperCase().match(/DEP[A-Z0-9]+/);
+  const extractedCode = match ? match[0] : null;
+
+  if (!extractedCode) {
+    throw new Error('Missing or invalid deposit code');
+  }
+
   // Tìm deposit request theo code
-  const depositRequest = await findDepositRequestByCode(content);
+  const depositRequest = await findDepositRequestByCode(extractedCode);
 
   if (!depositRequest) {
     throw new Error('Deposit request not found');
