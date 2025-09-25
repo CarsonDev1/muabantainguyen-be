@@ -15,6 +15,7 @@ import cors from 'cors';
 
 
 import { pool } from './setup/db.js';
+import { runAutoMigrations } from './setup/autoMigrate.js';
 import authRoutes from './routes/authRoutes.js';
 import passwordResetRoutes from './routes/passwordResetRoutes.js';
 import productRoutes from './routes/productRoutes.js';
@@ -72,16 +73,19 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(undefined, { swaggerUrl: '
 
 const port = process.env.PORT || 4000;
 
-app.listen(port, () => {
-  // Probe the DB on startup
-  pool
-    .query('SELECT 1')
-    .then(() => {
-      console.log(`[server] Listening on port ${port}`);
-    })
-    .catch((err) => {
-      console.error('[server] Database connection failed:', err.message);
-    });
+app.listen(port, async () => {
+  try {
+    // Probe the DB on startup
+    await pool.query('SELECT 1');
+
+    // Run auto-migrations
+    await runAutoMigrations();
+
+    console.log(`[server] Listening on port ${port}`);
+  } catch (err) {
+    console.error('[server] Database connection or migration failed:', err.message);
+    process.exit(1);
+  }
 });
 
 export default app;
