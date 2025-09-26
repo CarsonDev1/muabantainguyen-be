@@ -15,7 +15,7 @@ import cors from 'cors';
 
 
 import { pool } from './setup/db.js';
-import { runAutoMigrations } from './setup/autoMigrate.js';
+import { autoMigrateAll } from './setup/autoMigrate.js';
 import authRoutes from './routes/authRoutes.js';
 import passwordResetRoutes from './routes/passwordResetRoutes.js';
 import productRoutes from './routes/productRoutes.js';
@@ -79,7 +79,7 @@ app.listen(port, async () => {
     await pool.query('SELECT 1');
 
     // Run auto-migrations
-    await runAutoMigrations();
+    await autoMigrateAll();
 
     console.log(`[server] Listening on port ${port}`);
   } catch (err) {
