@@ -15,6 +15,7 @@ import cors from 'cors';
 
 
 import { pool } from './setup/db.js';
+import { initDatabase } from './setup/init.js';
 import authRoutes from './routes/authRoutes.js';
 import passwordResetRoutes from './routes/passwordResetRoutes.js';
 import productRoutes from './routes/productRoutes.js';
@@ -76,6 +77,8 @@ app.listen(port, async () => {
   try {
     // Probe the DB on startup
     await pool.query('SELECT 1');
+    // Ensure schema exists without manual migration
+    await initDatabase();
     console.log(`[server] Listening on port ${port}`);
   } catch (err) {
     console.error('[server] Database connection failed:', err.message);
