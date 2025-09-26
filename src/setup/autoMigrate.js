@@ -9,7 +9,7 @@ export async function autoMigrateAll() {
   try {
     await client.query('BEGIN');
 
-    // 0. Create users table
+    // 0. Users table
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -25,7 +25,33 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // 1. Create wallets table
+    // 1. Refresh tokens table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS refresh_tokens (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        token TEXT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        revoked BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // 2. Password resets table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        token TEXT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // 3. Wallets table
     await client.query(`
       CREATE TABLE IF NOT EXISTS wallets (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -38,7 +64,7 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // 2. Create wallet_transactions table
+    // 4. Wallet transactions table
     await client.query(`
       CREATE TABLE IF NOT EXISTS wallet_transactions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -60,7 +86,7 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // 3. Create deposit_requests table
+    // 5. Deposit requests table
     await client.query(`
       CREATE TABLE IF NOT EXISTS deposit_requests (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -80,17 +106,52 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // 4. Create indexes
+    // 6. Announcements
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        title VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        image TEXT,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // 7. FAQs
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS faqs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        question TEXT NOT NULL,
+        answer TEXT NOT NULL,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // 8. Site settings
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS site_settings (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        key VARCHAR(100) UNIQUE NOT NULL,
+        value TEXT,
+        description TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // 9. Indexes
     await client.query(`CREATE INDEX IF NOT EXISTS idx_wallets_user_id ON wallets(user_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_wallet_id ON wallet_transactions(wallet_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_id ON wallet_transactions(user_id)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_type ON wallet_transactions(type)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_created_at ON wallet_transactions(created_at DESC)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_deposit_requests_user_id ON deposit_requests(user_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_deposit_requests_status ON deposit_requests(status)`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_deposit_requests_payment_code ON deposit_requests(payment_code)`);
 
-    // 5. Create wallet creation function & trigger
+    // 10. Trigger: auto create wallet when new user created
     await client.query(`
       CREATE OR REPLACE FUNCTION create_user_wallet()
       RETURNS TRIGGER AS $$
@@ -109,50 +170,7 @@ export async function autoMigrateAll() {
         EXECUTE FUNCTION create_user_wallet()
     `);
 
-    // 6. Create wallets for existing users
-    await client.query(`
-      INSERT INTO wallets (user_id)
-      SELECT id FROM users 
-      WHERE id NOT IN (SELECT user_id FROM wallets WHERE user_id IS NOT NULL)
-      ON CONFLICT (user_id) DO NOTHING
-    `);
-
-    // 7. Create announcements, faqs, site_settings
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS announcements (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        title VARCHAR(255) NOT NULL,
-        content TEXT NOT NULL,
-        image TEXT,
-        is_active BOOLEAN NOT NULL DEFAULT true,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS faqs (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        question TEXT NOT NULL,
-        answer TEXT NOT NULL,
-        is_active BOOLEAN NOT NULL DEFAULT true,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS site_settings (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        key VARCHAR(100) UNIQUE NOT NULL,
-        value TEXT,
-        description TEXT,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    // 8. Trigger for updated_at
+    // 11. Trigger: auto update updated_at
     await client.query(`
       CREATE OR REPLACE FUNCTION update_updated_at_column()
       RETURNS TRIGGER AS $$
@@ -163,7 +181,18 @@ export async function autoMigrateAll() {
       $$ LANGUAGE plpgsql
     `);
 
-    const tablesWithUpdatedAt = ['users', 'wallets', 'wallet_transactions', 'deposit_requests', 'announcements', 'faqs', 'site_settings'];
+    const tablesWithUpdatedAt = [
+      'users',
+      'refresh_tokens',
+      'password_resets',
+      'wallets',
+      'wallet_transactions',
+      'deposit_requests',
+      'announcements',
+      'faqs',
+      'site_settings'
+    ];
+
     for (const tbl of tablesWithUpdatedAt) {
       await client.query(`DROP TRIGGER IF EXISTS update_${tbl}_updated_at ON ${tbl}`);
       await client.query(`
