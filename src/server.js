@@ -15,7 +15,6 @@ import cors from 'cors';
 
 
 import { pool } from './setup/db.js';
-import { autoMigrateAll } from './setup/autoMigrate.js';
 import authRoutes from './routes/authRoutes.js';
 import passwordResetRoutes from './routes/passwordResetRoutes.js';
 import productRoutes from './routes/productRoutes.js';
@@ -77,13 +76,9 @@ app.listen(port, async () => {
   try {
     // Probe the DB on startup
     await pool.query('SELECT 1');
-
-    // Run auto-migrations
-    await autoMigrateAll();
-
     console.log(`[server] Listening on port ${port}`);
   } catch (err) {
-    console.error('[server] Database connection or migration failed:', err.message);
+    console.error('[server] Database connection failed:', err.message);
     process.exit(1);
   }
 });
