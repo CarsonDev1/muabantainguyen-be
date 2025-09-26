@@ -1,20 +1,18 @@
 'use strict';
-
 import { pool } from './db.js';
 
-// Auto-migration for all database tables
 export async function autoMigrateAll() {
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    // USERS
+    // 1. USERS TABLE (cần cho hầu hết các quan hệ)
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         name VARCHAR(100) NOT NULL,
-        email VARCHAR(150) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
         phone VARCHAR(20) UNIQUE,
         password_hash TEXT NOT NULL,
         avatar_url TEXT,
@@ -25,7 +23,7 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // REFRESH TOKENS
+    // 2. REFRESH TOKENS
     await client.query(`
       CREATE TABLE IF NOT EXISTS refresh_tokens (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -37,18 +35,7 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // PASSWORD RESETS
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS password_resets (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        token TEXT NOT NULL,
-        expires_at TIMESTAMPTZ NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    // WALLETS
+    // 3. WALLETS
     await client.query(`
       CREATE TABLE IF NOT EXISTS wallets (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -61,7 +48,7 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // WALLET TRANSACTIONS
+    // 4. WALLET TRANSACTIONS
     await client.query(`
       CREATE TABLE IF NOT EXISTS wallet_transactions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -83,7 +70,7 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // DEPOSIT REQUESTS
+    // 5. DEPOSIT REQUESTS
     await client.query(`
       CREATE TABLE IF NOT EXISTS deposit_requests (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -103,69 +90,7 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // PRODUCTS
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS products (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        price NUMERIC(15,2) NOT NULL,
-        stock INT NOT NULL DEFAULT 0,
-        image_url TEXT,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    // CARTS
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS carts (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
-        quantity INT NOT NULL DEFAULT 1,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    // ORDERS
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS orders (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        total_amount NUMERIC(15,2) NOT NULL,
-        status VARCHAR(20) NOT NULL DEFAULT 'pending',
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    // VOUCHERS
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS vouchers (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        code VARCHAR(50) UNIQUE NOT NULL,
-        discount NUMERIC(5,2) NOT NULL,
-        is_active BOOLEAN NOT NULL DEFAULT true,
-        expires_at TIMESTAMPTZ,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    // UPLOADS
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS uploads (
-        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        url TEXT NOT NULL,
-        type VARCHAR(50),
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
-
-    // ANNOUNCEMENTS
+    // 6. ANNOUNCEMENTS
     await client.query(`
       CREATE TABLE IF NOT EXISTS announcements (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -178,7 +103,7 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // FAQS
+    // 7. FAQ
     await client.query(`
       CREATE TABLE IF NOT EXISTS faqs (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -190,7 +115,7 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // SITE SETTINGS
+    // 8. SITE SETTINGS
     await client.query(`
       CREATE TABLE IF NOT EXISTS site_settings (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -202,43 +127,62 @@ export async function autoMigrateAll() {
       )
     `);
 
-    // FUNCTIONS + TRIGGERS
+    // 9. PRODUCTS
     await client.query(`
-      CREATE OR REPLACE FUNCTION update_updated_at_column()
-      RETURNS TRIGGER AS $$
-      BEGIN
-        NEW.updated_at = NOW();
-        RETURN NEW;
-      END;
-      $$ LANGUAGE plpgsql
+      CREATE TABLE IF NOT EXISTS products (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE NOT NULL,
+        description TEXT,
+        price NUMERIC(15,2) NOT NULL,
+        stock INT NOT NULL DEFAULT 0,
+        category_id UUID,
+        image_url TEXT,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
     `);
 
-    const tablesWithUpdatedAt = [
-      'users',
-      'refresh_tokens',
-      'wallets',
-      'wallet_transactions',
-      'deposit_requests',
-      'products',
-      'carts',
-      'orders',
-      'vouchers',
-      'announcements',
-      'faqs',
-      'site_settings'
-    ];
+    // 10. CATEGORIES
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE NOT NULL,
+        parent_id UUID,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
 
-    for (const table of tablesWithUpdatedAt) {
-      await client.query(`DROP TRIGGER IF EXISTS update_${table}_updated_at ON ${table}`);
-      await client.query(`
-        CREATE TRIGGER update_${table}_updated_at
-          BEFORE UPDATE ON ${table}
-          FOR EACH ROW
-          EXECUTE FUNCTION update_updated_at_column()
-      `);
-    }
+    // 11. ORDERS
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        total_amount NUMERIC(15,2) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'pending',
+        payment_status VARCHAR(20) NOT NULL DEFAULT 'unpaid',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
 
-    // AUTO CREATE WALLET WHEN USER INSERT
+    // 12. SUPPORT TICKETS
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        subject TEXT NOT NULL,
+        content TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'open',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    // 13. TRIGGERS & FUNCTIONS
     await client.query(`
       CREATE OR REPLACE FUNCTION create_user_wallet()
       RETURNS TRIGGER AS $$
@@ -252,30 +196,48 @@ export async function autoMigrateAll() {
     await client.query(`DROP TRIGGER IF EXISTS trigger_create_user_wallet ON users`);
     await client.query(`
       CREATE TRIGGER trigger_create_user_wallet
-        AFTER INSERT ON users
+      AFTER INSERT ON users
+      FOR EACH ROW
+      EXECUTE FUNCTION create_user_wallet()
+    `);
+
+    await client.query(`
+      CREATE OR REPLACE FUNCTION update_updated_at_column()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql
+    `);
+
+    for (const table of ['users', 'products', 'categories', 'orders', 'faqs', 'announcements', 'site_settings']) {
+      await client.query(`
+        DROP TRIGGER IF EXISTS update_${table}_updated_at ON ${table}
+      `);
+      await client.query(`
+        CREATE TRIGGER update_${table}_updated_at
+        BEFORE UPDATE ON ${table}
         FOR EACH ROW
-        EXECUTE FUNCTION create_user_wallet()
+        EXECUTE FUNCTION update_updated_at_column()
+      `);
+    }
+
+    // 14. AUTO-WALLET CREATE FOR EXISTING USERS
+    await client.query(`
+      INSERT INTO wallets (user_id)
+      SELECT id FROM users 
+      WHERE id NOT IN (SELECT user_id FROM wallets)
+      ON CONFLICT DO NOTHING
     `);
 
     await client.query('COMMIT');
     console.log('✅ All database tables auto-migration completed successfully');
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ Database auto-migration failed:', error.message);
+    console.error('❌ Auto-migration failed:', error.message);
     throw error;
   } finally {
     client.release();
-  }
-}
-
-// Auto-migration runner
-export async function runAutoMigrations() {
-  try {
-    console.log('🔄 Starting auto-migrations...');
-    await autoMigrateAll();
-    console.log('✅ All auto-migrations completed successfully');
-  } catch (error) {
-    console.error('❌ Auto-migration failed:', error.message);
-    process.exit(1);
   }
 }
