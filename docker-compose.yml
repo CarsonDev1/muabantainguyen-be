@@ -23,7 +23,7 @@ services:
         environment:
             - POSTGRES_DB=muabantainguyen
             - POSTGRES_USER=postgres
-            - POSTGRES_PASSWORD=123
+            - POSTGRES_PASSWORD=muabantainguyen123
         volumes:
             - postgres_data:/var/lib/postgresql/data
             - ./init.sql:/docker-entrypoint-initdb.d/init.sql
