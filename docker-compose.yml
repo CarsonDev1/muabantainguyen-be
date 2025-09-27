@@ -11,7 +11,7 @@ services:
             - DB_PORT=5432
             - DB_NAME=muabantainguyen
             - DB_USER=postgres
-            - DB_PASSWORD=123
+            - DB_PASSWORD=muabantainguyen123
         depends_on:
             - postgres
         volumes:
