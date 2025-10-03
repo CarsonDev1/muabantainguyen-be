@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+    app:
+        build: .
+        network_mode: 'host'
+        environment:
+            - PGHOST=127.0.0.1
+            - PGPORT=5432
+            - PGDATABASE=muabantainguyen
+            - PGUSER=postgres
+            - PGPASSWORD=muabantainguyen123
+        volumes:
+            - ./uploads:/app/uploads
+        restart: unless-stopped
+
+    nginx:
+        image: nginx:alpine
+        network_mode: 'host'
+        volumes:
+            - ./nginx-ssl.conf:/etc/nginx/nginx.conf:ro
+            - ./ssl:/etc/nginx/ssl:ro
+        restart: unless-stopped
