@@ -34,12 +34,34 @@ const app = express();
 app.use(helmet());
 app.use(
 	cors({
-		origin: ['http://localhost:3000', 'https://tainguyenmmoshop.com/', 'http://tainguyenmmoshop.com/'],
+		origin: function (origin, callback) {
+			// Allow requests with no origin (mobile apps, curl, postman)
+			if (!origin) return callback(null, true);
+
+			const allowedOrigins = [
+				'http://localhost:3000',
+				'http://localhost:3001',
+				'https://shopmmo.pro.vn',
+				'http://shopmmo.pro.vn',
+				'https://tainguyenmmoshop.com',
+			];
+
+			if (allowedOrigins.indexOf(origin) !== -1) {
+				callback(null, true);
+			} else {
+				callback(null, true); // Allow all for now
+			}
+		},
 		credentials: true,
-		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-		allowedHeaders: ['Content-Type', 'Authorization'],
+		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+		allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+		exposedHeaders: ['Content-Range', 'X-Content-Range'],
+		maxAge: 600,
 	})
 );
+
+// Add OPTIONS handler for preflight
+app.options('*', cors());
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
