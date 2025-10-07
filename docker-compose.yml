@@ -9,7 +9,7 @@ services:
             - PGPORT=5432
             - PGDATABASE=muabantainguyen
             - PGUSER=postgres
-            - PGPASSWORD=muabantainguyen123
+            - PGPASSWORD=123
         volumes:
             - ./uploads:/app/uploads
         restart: unless-stopped
