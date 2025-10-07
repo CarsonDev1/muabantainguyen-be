@@ -13,7 +13,6 @@ import { fileURLToPath } from 'url';
 import { activityLogger } from './middleware/activityLogger.js';
 import cors from 'cors';
 
-
 import { pool } from './setup/db.js';
 import { initDatabase } from './setup/init.js';
 import authRoutes from './routes/authRoutes.js';
@@ -33,14 +32,21 @@ import walletRoutes from './routes/walletRoutes.js';
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+app.use(
+	cors({
+		origin: ['http://localhost:3000', 'https://tainguyenmmoshop.com/', 'http://tainguyenmmoshop.com/'],
+		credentials: true,
+		methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+		allowedHeaders: ['Content-Type', 'Authorization'],
+	})
+);
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
 app.use(activityLogger);
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+	res.json({ status: 'ok' });
 });
 
 app.use('/api/auth', authRoutes);
@@ -62,29 +68,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const openapiPath = path.join(__dirname, 'docs', 'openapi.json');
 app.get('/api-docs.json', (req, res) => {
-  try {
-    const openapiDoc = JSON.parse(fs.readFileSync(openapiPath, 'utf8'));
-    res.json(openapiDoc);
-  } catch (e) {
-    res.status(500).json({ message: 'Failed to load OpenAPI spec', error: e.message });
-  }
+	try {
+		const openapiDoc = JSON.parse(fs.readFileSync(openapiPath, 'utf8'));
+		res.json(openapiDoc);
+	} catch (e) {
+		res.status(500).json({ message: 'Failed to load OpenAPI spec', error: e.message });
+	}
 });
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(undefined, { swaggerUrl: '/api-docs.json' }));
 
 const port = process.env.PORT || 4000;
 
 app.listen(port, async () => {
-  try {
-    // Probe the DB on startup
-    await pool.query('SELECT 1');
-    // Ensure schema exists without manual migration
-    // await // initDatabase();;
-    console.log(`[server] Listening on port ${port}`);
-  } catch (err) {
-    console.error('[server] Database connection failed:', err.message);
-    process.exit(1);
-  }
+	try {
+		// Probe the DB on startup
+		await pool.query('SELECT 1');
+		// Ensure schema exists without manual migration
+		// await // initDatabase();;
+		console.log(`[server] Listening on port ${port}`);
+	} catch (err) {
+		console.error('[server] Database connection failed:', err.message);
+		process.exit(1);
+	}
 });
 
 export default app;
-
