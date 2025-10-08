@@ -31,7 +31,30 @@ import walletRoutes from './routes/walletRoutes.js';
 
 const app = express();
 
-app.options('*', cors());
+const corsOptions = {
+	origin: [
+		'http://localhost:3000',
+		'http://localhost:3001',
+		'https://shopmmo.pro.vn',
+		'http://shopmmo.pro.vn',
+		'https://tainguyemmoshop.com',
+		'http://tainguyemmoshop.com',
+	],
+	credentials: true,
+	methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+	allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+	exposedHeaders: ['Content-Range', 'X-Content-Range'],
+	maxAge: 600,
+};
+
+app.use(
+	helmet({
+		crossOriginResourcePolicy: { policy: 'cross-origin' },
+		crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+	})
+);
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
