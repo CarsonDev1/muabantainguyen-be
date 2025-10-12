@@ -174,11 +174,11 @@ async function seedInventory() {
 
 		for (const row of summary) {
 			console.log(
-				row.product_name.padEnd(30),
-				row.total_items.toString().padEnd(10),
-				row.available_items.toString().padEnd(10),
-				row.sold_items.toString().padEnd(10),
-				row.expiring_soon.toString().padEnd(10)
+				(row.product_name || 'Unknown').padEnd(30),
+				String(row.total_items || 0).padEnd(10),
+				String(row.available_items || 0).padEnd(10),
+				String(row.sold_items || 0).padEnd(10),
+				String(row.expiring_soon || 0).padEnd(10)
 			);
 		}
 		console.log('─'.repeat(90));
