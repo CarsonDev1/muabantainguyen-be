@@ -439,6 +439,36 @@
 				}
 			}
 		},
+		"/api/orders": {
+			"get": {
+				"summary": "List user's orders",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/orders/{id}": {
+			"get": {
+				"summary": "Get order detail",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"404": { "description": "Not found" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
 		"/api/orders/{id}/refund": {
 			"post": {
 				"summary": "Admin: Refund order and return money to user wallet",
@@ -1092,6 +1122,358 @@
 				}
 			}
 		},
+		"/api/admin/inventory/stats": {
+			"get": {
+				"summary": "Admin: Get inventory statistics",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Inventory"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"stats": {
+											"type": "object",
+											"properties": {
+												"total_items": { "type": "integer" },
+												"available_items": { "type": "integer" },
+												"sold_items": { "type": "integer" },
+												"expired_items": { "type": "integer" },
+												"expiring_soon": { "type": "integer" },
+												"total_value": { "type": "number" },
+												"products_with_inventory": { "type": "integer" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/inventory/expiring": {
+			"get": {
+				"summary": "Admin: Get inventory items expiring soon",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Inventory"],
+				"parameters": [
+					{
+						"name": "days",
+						"in": "query",
+						"schema": { "type": "integer", "default": 7 },
+						"description": "Number of days threshold for expiring items"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"items": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"product_id": { "type": "string", "format": "uuid" },
+													"product_name": { "type": "string" },
+													"secret_data": { "type": "string" },
+													"account_expires_at": { "type": "string", "format": "date-time" },
+													"status": {
+														"type": "string",
+														"enum": ["available", "sold", "expired"]
+													},
+													"created_at": { "type": "string", "format": "date-time" }
+												}
+											}
+										},
+										"count": { "type": "integer" },
+										"daysThreshold": { "type": "integer" }
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/inventory/{productId}": {
+			"get": {
+				"summary": "Admin: Get inventory for a specific product",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Inventory"],
+				"parameters": [
+					{
+						"name": "productId",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string", "format": "uuid" }
+					},
+					{
+						"name": "showSold",
+						"in": "query",
+						"schema": { "type": "boolean", "default": false },
+						"description": "Include sold items"
+					},
+					{
+						"name": "showExpired",
+						"in": "query",
+						"schema": { "type": "boolean", "default": false },
+						"description": "Include expired items"
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"schema": { "type": "integer", "default": 100 },
+						"description": "Limit number of items"
+					},
+					{
+						"name": "offset",
+						"in": "query",
+						"schema": { "type": "integer", "default": 0 },
+						"description": "Offset for pagination"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"items": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"product_id": { "type": "string", "format": "uuid" },
+													"secret_data": { "type": "string" },
+													"account_expires_at": { "type": "string", "format": "date-time" },
+													"status": {
+														"type": "string",
+														"enum": ["available", "sold", "expired"]
+													},
+													"cost_price": { "type": "number" },
+													"source": { "type": "string" },
+													"created_at": { "type": "string", "format": "date-time" }
+												}
+											}
+										},
+										"count": { "type": "integer" }
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/inventory": {
+			"post": {
+				"summary": "Admin: Add a single inventory item",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Inventory"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"productId": { "type": "string", "format": "uuid" },
+									"secretData": { "type": "string" },
+									"notes": { "type": "string" },
+									"accountExpiresAt": { "type": "string", "format": "date-time" },
+									"costPrice": { "type": "number", "default": 0 },
+									"source": { "type": "string", "default": "admin_manual" }
+								},
+								"required": ["productId", "secretData"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Inventory item added successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"item": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"product_id": { "type": "string", "format": "uuid" },
+												"secret_data": { "type": "string" },
+												"account_expires_at": { "type": "string", "format": "date-time" },
+												"status": { "type": "string" },
+												"created_at": { "type": "string", "format": "date-time" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Invalid parameters" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/inventory/bulk": {
+			"post": {
+				"summary": "Admin: Bulk add inventory items",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Inventory"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"productId": { "type": "string", "format": "uuid" },
+									"items": {
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"secretData": { "type": "string" },
+												"notes": { "type": "string" },
+												"accountExpiresAt": { "type": "string", "format": "date-time" },
+												"costPrice": { "type": "number" }
+											}
+										}
+									},
+									"itemsText": {
+										"type": "string",
+										"description": "Alternative to items array - text format for bulk import"
+									}
+								},
+								"required": ["productId"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Inventory items added successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"count": { "type": "integer" },
+										"items": {
+											"type": "array",
+											"items": { "type": "object" }
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Invalid parameters" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/inventory/{itemId}": {
+			"delete": {
+				"summary": "Admin: Delete an inventory item",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Inventory"],
+				"parameters": [
+					{
+						"name": "itemId",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string", "format": "uuid" }
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Inventory item deleted successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"item": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"product_id": { "type": "string", "format": "uuid" },
+												"status": { "type": "string" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Cannot delete sold item" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/inventory/sync-stock": {
+			"post": {
+				"summary": "Admin: Manually sync all product stocks",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Inventory"],
+				"responses": {
+					"200": {
+						"description": "Stock sync completed",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"products": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string" },
+													"stock": { "type": "integer" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
 		"/api/admin/vouchers": {
 			"get": {
 				"summary": "Admin: list vouchers",
@@ -1156,7 +1538,38 @@
 					{ "name": "page", "in": "query", "schema": { "type": "integer" } },
 					{ "name": "pageSize", "in": "query", "schema": { "type": "integer" } }
 				],
-				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"items": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"order_item_id": { "type": "string", "format": "uuid" },
+													"data": { "type": "string" },
+													"expires_at": { "type": "string", "format": "date-time" },
+													"order_id": { "type": "string", "format": "uuid" },
+													"created_at": { "type": "string", "format": "date-time" }
+												}
+											}
+										},
+										"count": { "type": "integer" }
+									}
+								}
+							}
+						}
+					},
+					"401": { "description": "Unauthorized" }
+				}
 			}
 		},
 		"/api/resources/settings": {
@@ -2601,6 +3014,7 @@
 		{ "name": "Admin FAQ", "description": "Admin FAQ management" },
 		{ "name": "Admin Announcements", "description": "Admin announcements management" },
 		{ "name": "Wallet", "description": "User wallet functionality" },
-		{ "name": "Admin Wallet", "description": "Admin wallet management" }
+		{ "name": "Admin Wallet", "description": "Admin wallet management" },
+		{ "name": "Admin Inventory", "description": "Admin inventory management" }
 	]
 }
