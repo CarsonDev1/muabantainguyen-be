@@ -1,7 +1,7 @@
 'use strict';
 
 import express from 'express';
-import { authenticateToken } from '../middleware/auth.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 import { getUserDeliveries } from '../models/deliveryModel.js';
 
 const router = express.Router();
@@ -10,7 +10,7 @@ const router = express.Router();
  * GET /api/resources
  * Get user's purchased resources (deliveries)
  */
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authMiddleware, async (req, res) => {
 	try {
 		const userId = req.user.id;
 		const items = await getUserDeliveries(userId);
