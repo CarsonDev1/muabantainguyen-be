@@ -12,6 +12,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { activityLogger } from './middleware/activityLogger.js';
 import cors from 'cors';
+import cron from 'node-cron';
 
 import { pool } from './setup/db.js';
 import { initDatabase } from './setup/init.js';
@@ -28,6 +29,7 @@ import securityRoutes from './routes/securityRoutes.js';
 import voucherRoutes from './routes/voucherRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import walletRoutes from './routes/walletRoutes.js';
+import { cleanupExpiredDeliveries } from './models/deliveryModel.js';
 
 const app = express();
 
@@ -112,6 +114,16 @@ app.listen(port, async () => {
 	} catch (err) {
 		console.error('[server] Database connection failed:', err.message);
 		process.exit(1);
+	}
+});
+
+// Run cleanup every day at 2 AM
+cron.schedule('0 2 * * *', async () => {
+	console.log('[cron] Running expired deliveries cleanup...');
+	try {
+		await cleanupExpiredDeliveries();
+	} catch (error) {
+		console.error('[cron] Cleanup failed:', error);
 	}
 });
 

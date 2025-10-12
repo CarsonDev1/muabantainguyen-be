@@ -9,7 +9,8 @@
 		"start": "node src/server.js",
 		"migrate": "node scripts/migrate.js",
 		"swagger": "node scripts/swagger.js",
-		"swagger-ui": "node scripts/swagger-ui.js"
+		"swagger-ui": "node scripts/swagger-ui.js",
+		"seed:inventory": "node scripts/seed-inventory.js"
 	},
 	"dependencies": {
 		"bcryptjs": "^2.4.3",
@@ -23,6 +24,7 @@
 		"jsonwebtoken": "^9.0.2",
 		"morgan": "^1.10.0",
 		"multer": "^2.0.2",
+		"node-cron": "^4.2.1",
 		"nodemailer": "^7.0.6",
 		"otplib": "^12.0.1",
 		"pg": "^8.12.0",
