@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+    app:
+        build: .
+        ports:
+            - '4000:4000'
+        environment:
+            - PGHOST=host.docker.internal
+            - PGPORT=5432
+            - PGDATABASE=muabantainguyen
+            - PGUSER=postgres
+            - PGPASSWORD=123
+            - NODE_ENV=production
+            - PORT=4000
+        volumes:
+            - ./uploads:/app/uploads
+        restart: unless-stopped
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        networks:
+            - app-network
+
+    nginx:
+        image: nginx:alpine
+        ports:
+            - '80:80'
+            - '443:443'
+        volumes:
+            - ./nginx-ssl.conf:/etc/nginx/nginx.conf:ro
+            - ./ssl:/etc/nginx/ssl:ro
+        depends_on:
+            - app
+        restart: unless-stopped
+        networks:
+            - app-network
+
+networks:
+    app-network:
+        driver: bridge

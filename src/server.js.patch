@@ -1,0 +1,3 @@
+// Comment out the initDatabase call line
+s/await initDatabase();/\/\/ await initDatabase();/g
+s/initDatabase()/\/\/ initDatabase();/g

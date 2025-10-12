@@ -1,0 +1,2606 @@
+{
+	"openapi": "3.0.3",
+	"info": {
+		"title": "Muabantainguyen API",
+		"version": "0.2.0",
+		"description": "API documentation with admin management, permissions, and site settings"
+	},
+	"servers": [{ "url": "https://shopmmo.pro.vn" }],
+	"paths": {
+		"/api/wallet": {
+			"get": {
+				"summary": "Get wallet info and statistics",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"wallet": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"balance": { "type": "number", "example": 500000 },
+												"total_deposited": { "type": "number", "example": 1000000 },
+												"total_spent": { "type": "number", "example": 500000 },
+												"created_at": { "type": "string", "format": "date-time" },
+												"updated_at": { "type": "string", "format": "date-time" }
+											}
+										},
+										"stats": {
+											"type": "object",
+											"properties": {
+												"balance": { "type": "number" },
+												"total_deposits": { "type": "number" },
+												"total_purchases": { "type": "number" },
+												"total_refunds": { "type": "number" },
+												"deposit_count": { "type": "integer" },
+												"purchase_count": { "type": "integer" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/deposit": {
+			"post": {
+				"summary": "Create deposit request",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"amount": {
+										"type": "number",
+										"minimum": 10000,
+										"maximum": 50000000,
+										"example": 100000
+									},
+									"paymentMethod": { "type": "string", "enum": ["sepay", "momo"], "default": "sepay" }
+								},
+								"required": ["amount"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Deposit request created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"requestId": { "type": "string", "format": "uuid" },
+										"amount": { "type": "number" },
+										"paymentCode": { "type": "string", "example": "DEP12345ABC" },
+										"paymentMethod": { "type": "string" },
+										"expiresAt": { "type": "string", "format": "date-time" },
+										"instructions": {
+											"type": "object",
+											"properties": {
+												"amount": { "type": "number" },
+												"code": { "type": "string" },
+												"method": { "type": "string" },
+												"bankAccount": { "type": "string" },
+												"bankName": { "type": "string" },
+												"accountNumber": { "type": "string" },
+												"accountName": { "type": "string" },
+												"note": { "type": "string" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Invalid amount or parameters" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/deposit/{id}": {
+			"get": {
+				"summary": "Check deposit request status",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"deposit": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"amount": { "type": "number" },
+												"paymentCode": { "type": "string" },
+												"status": {
+													"type": "string",
+													"enum": ["pending", "completed", "expired", "cancelled"]
+												},
+												"paymentMethod": { "type": "string" },
+												"expiresAt": { "type": "string", "format": "date-time" },
+												"completedAt": { "type": "string", "format": "date-time" },
+												"createdAt": { "type": "string", "format": "date-time" },
+												"isExpired": { "type": "boolean" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Deposit request not found" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/deposits": {
+			"get": {
+				"summary": "Get deposit history",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 20 } },
+					{
+						"name": "status",
+						"in": "query",
+						"schema": { "type": "string", "enum": ["pending", "completed", "expired", "cancelled"] }
+					}
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/transactions": {
+			"get": {
+				"summary": "Get wallet transaction history",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 20 } },
+					{
+						"name": "type",
+						"in": "query",
+						"schema": { "type": "string", "enum": ["deposit", "withdraw", "purchase", "refund"] }
+					},
+					{ "name": "startDate", "in": "query", "schema": { "type": "string", "format": "date" } },
+					{ "name": "endDate", "in": "query", "schema": { "type": "string", "format": "date" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/pay": {
+			"post": {
+				"summary": "Pay with wallet balance",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Wallet"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"amount": { "type": "number", "minimum": 1 },
+									"description": { "type": "string" },
+									"referenceType": { "type": "string", "example": "order" },
+									"referenceId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["amount", "description"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Payment successful" },
+					"400": { "description": "Insufficient balance or invalid parameters" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/wallet/webhook": {
+			"post": {
+				"summary": "Webhook for deposit payment confirmation (SePay)",
+				"description": "Webhook endpoint for SePay to notify payment confirmation. Requires API Key authentication.",
+				"security": [{ "apiKeyAuth": [] }],
+				"tags": ["Wallet"],
+				"parameters": [
+					{
+						"name": "Authorization",
+						"in": "header",
+						"required": true,
+						"schema": { "type": "string" },
+						"description": "API Key authentication in format: 'Apikey YOUR_API_KEY'"
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"content": { "type": "string", "description": "Payment code" },
+									"amount": { "type": "number" },
+									"status": { "type": "string", "enum": ["success", "failed"] },
+									"provider_tx_id": { "type": "string" }
+								},
+								"required": ["content", "amount", "status"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Webhook processed successfully" },
+					"400": { "description": "Invalid webhook data" },
+					"401": { "description": "Invalid or missing API key" },
+					"500": { "description": "Webhook authentication not configured" }
+				}
+			}
+		},
+		"/api/wallet/admin/adjust": {
+			"post": {
+				"summary": "Admin: Manually adjust user wallet balance",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Wallet"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"userId": { "type": "string", "format": "uuid" },
+									"amount": {
+										"type": "number",
+										"description": "Positive to add, negative to subtract"
+									},
+									"description": { "type": "string", "example": "Manual adjustment by admin" }
+								},
+								"required": ["userId", "amount"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Wallet adjusted successfully" },
+					"400": { "description": "Invalid parameters or insufficient balance" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/wallet/admin/{userId}": {
+			"get": {
+				"summary": "Admin: Get user wallet info",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Wallet"],
+				"parameters": [
+					{
+						"name": "userId",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string", "format": "uuid" }
+					}
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/wallet/admin/refund": {
+			"post": {
+				"summary": "Admin: Process refund to user wallet",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Wallet"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"userId": { "type": "string", "format": "uuid" },
+									"amount": { "type": "number", "minimum": 1 },
+									"description": { "type": "string" },
+									"referenceType": { "type": "string" },
+									"referenceId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["userId", "amount"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Refund processed successfully" },
+					"400": { "description": "Invalid parameters" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/orders/checkout": {
+			"post": {
+				"summary": "Enhanced checkout with wallet payment support",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
+				"requestBody": {
+					"required": false,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"paymentMethod": {
+										"type": "string",
+										"enum": ["sepay", "momo", "wallet"],
+										"default": "sepay"
+									},
+									"useWallet": {
+										"type": "boolean",
+										"default": false,
+										"description": "Use wallet balance for payment"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Order created successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"orderId": { "type": "string", "format": "uuid" },
+										"total": { "type": "number" },
+										"paymentMethod": { "type": "string" },
+										"status": { "type": "string", "enum": ["pending", "paid"] }
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Cart empty or insufficient wallet balance" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/orders/stats": {
+			"get": {
+				"summary": "Get user order statistics",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"stats": {
+											"type": "object",
+											"properties": {
+												"total_orders": { "type": "integer" },
+												"pending_orders": { "type": "integer" },
+												"paid_orders": { "type": "integer" },
+												"refunded_orders": { "type": "integer" },
+												"total_spent": { "type": "number" },
+												"wallet_payments": { "type": "integer" },
+												"external_payments": { "type": "integer" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/orders/{id}/refund": {
+			"post": {
+				"summary": "Admin: Refund order and return money to user wallet",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Orders"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"reason": { "type": "string", "example": "Product unavailable" }
+								},
+								"required": ["reason"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Order refunded successfully" },
+					"400": { "description": "Invalid order status or already refunded" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/admins": {
+			"get": {
+				"summary": "List all admins with roles and permissions",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Management"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"admins": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string" },
+													"email": { "type": "string" },
+													"phone": { "type": "string" },
+													"role": { "type": "string", "enum": ["admin", "super", "staff"] },
+													"admin_role_name": { "type": "string" },
+													"admin_role_display": { "type": "string" },
+													"permissions": { "type": "array", "items": { "type": "string" } },
+													"is_blocked": { "type": "boolean" },
+													"created_at": { "type": "string", "format": "date-time" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Forbidden - requires admins.view permission" }
+				}
+			},
+			"post": {
+				"summary": "Create new admin account",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Management"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string", "example": "John Admin" },
+									"email": { "type": "string", "format": "email", "example": "admin@shop.com" },
+									"phone": { "type": "string", "example": "0123456789" },
+									"password": { "type": "string", "example": "securepassword123" },
+									"adminRoleId": { "type": "string", "format": "uuid", "example": "uuid-of-role" }
+								},
+								"required": ["email", "password", "adminRoleId"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Admin created successfully" },
+					"400": { "description": "Bad request - missing required fields" },
+					"403": { "description": "Forbidden - requires admins.create permission" }
+				}
+			}
+		},
+		"/api/admin/admins/{id}/role": {
+			"put": {
+				"summary": "Update admin role",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Management"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"adminRoleId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["adminRoleId"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Admin role updated successfully" },
+					"403": { "description": "Forbidden - requires admins.edit permission" }
+				}
+			}
+		},
+		"/api/admin/roles": {
+			"get": {
+				"summary": "List all admin roles with permissions",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Roles & Permissions"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"roles": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string", "example": "product_manager" },
+													"display_name": { "type": "string", "example": "Product Manager" },
+													"description": { "type": "string" },
+													"is_active": { "type": "boolean" },
+													"permissions": {
+														"type": "array",
+														"items": {
+															"type": "object",
+															"properties": {
+																"name": {
+																	"type": "string",
+																	"example": "products.view"
+																},
+																"display_name": {
+																	"type": "string",
+																	"example": "Xem sản phẩm"
+																},
+																"module": { "type": "string", "example": "products" }
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Forbidden - requires admins.view permission" }
+				}
+			}
+		},
+		"/api/admin/permissions": {
+			"get": {
+				"summary": "List all permissions grouped by module",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Roles & Permissions"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"permissions": {
+											"type": "object",
+											"additionalProperties": {
+												"type": "array",
+												"items": {
+													"type": "object",
+													"properties": {
+														"id": { "type": "string", "format": "uuid" },
+														"name": { "type": "string", "example": "products.create" },
+														"display_name": { "type": "string", "example": "Tạo sản phẩm" },
+														"description": { "type": "string" },
+														"module": { "type": "string", "example": "products" }
+													}
+												}
+											},
+											"example": {
+												"products": [
+													{
+														"name": "products.view",
+														"display_name": "Xem sản phẩm",
+														"module": "products"
+													}
+												],
+												"orders": [
+													{
+														"name": "orders.view",
+														"display_name": "Xem đơn hàng",
+														"module": "orders"
+													}
+												]
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Forbidden - requires admins.view permission" }
+				}
+			}
+		},
+		"/api/admin/settings": {
+			"get": {
+				"summary": "Get all site settings (admin only)",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Site Settings"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"settings": {
+											"type": "object",
+											"additionalProperties": {
+												"type": "object",
+												"additionalProperties": {
+													"type": "object",
+													"properties": {
+														"value": { "type": "string" },
+														"type": {
+															"type": "string",
+															"enum": ["text", "number", "boolean", "json", "image"]
+														},
+														"display_name": { "type": "string" },
+														"description": { "type": "string" },
+														"is_public": { "type": "boolean" }
+													}
+												}
+											},
+											"example": {
+												"branding": {
+													"site_name": {
+														"value": "My Shop",
+														"type": "text",
+														"display_name": "Tên website",
+														"is_public": true
+													},
+													"site_logo": {
+														"value": "https://logo-url.com",
+														"type": "image",
+														"display_name": "Logo website",
+														"is_public": true
+													}
+												},
+												"contact": {
+													"contact_email": {
+														"value": "contact@shop.com",
+														"type": "text",
+														"display_name": "Email liên hệ",
+														"is_public": true
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Forbidden - requires settings.view permission" }
+				}
+			},
+			"put": {
+				"summary": "Update site settings",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Site Settings"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"additionalProperties": { "type": "string" },
+								"example": {
+									"site_name": "My New Shop Name",
+									"site_logo": "https://new-logo-url.com",
+									"contact_email": "newcontact@shop.com",
+									"maintenance_mode": "false",
+									"allow_registration": "true"
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Settings updated successfully" },
+					"403": { "description": "Forbidden - requires settings.edit permission" }
+				}
+			}
+		},
+		"/api/public/settings": {
+			"get": {
+				"summary": "Get public site settings (no auth required)",
+				"tags": ["Public"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"settings": {
+											"type": "object",
+											"additionalProperties": true,
+											"example": {
+												"site_name": "My Shop",
+												"site_logo": "https://logo-url.com",
+												"site_banner": "https://banner-url.com",
+												"contact_email": "contact@shop.com",
+												"contact_phone": "0123456789",
+												"seo_title": "My Shop - Best Digital Products",
+												"seo_description": "Description for SEO",
+												"default_currency": "VND",
+												"maintenance_mode": false,
+												"allow_registration": true
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/admin/products/{id}": {
+			"get": {
+				"summary": "Admin: get product detail",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Products"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"product": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"name": { "type": "string" },
+												"slug": { "type": "string" },
+												"description": { "type": "string" },
+												"price": { "type": "number" },
+												"stock": { "type": "integer" },
+												"image_url": { "type": "string" },
+												"category_id": { "type": "string", "format": "uuid" },
+												"category_name": { "type": "string" },
+												"category_slug": { "type": "string" },
+												"is_active": { "type": "boolean" },
+												"created_at": { "type": "string", "format": "date-time" },
+												"updated_at": { "type": "string", "format": "date-time" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Product not found" },
+					"403": { "description": "Forbidden - requires products.view permission" }
+				}
+			},
+			"put": {
+				"summary": "Admin: update product",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Products"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"slug": { "type": "string" },
+									"description": { "type": "string" },
+									"price": { "type": "number" },
+									"stock": { "type": "integer" },
+									"imageUrl": { "type": "string" },
+									"categoryId": { "type": "string", "format": "uuid" },
+									"isActive": { "type": "boolean" }
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires products.edit permission" }
+				}
+			},
+			"delete": {
+				"summary": "Admin: delete product",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Products"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires products.delete permission" }
+				}
+			}
+		},
+		"/api/admin/products": {
+			"post": {
+				"summary": "Admin: create product",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Products"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"slug": { "type": "string" },
+									"description": { "type": "string" },
+									"price": { "type": "number" },
+									"stock": { "type": "integer" },
+									"imageUrl": { "type": "string" },
+									"categoryId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["name", "slug", "price"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Created" },
+					"403": { "description": "Forbidden - requires products.create permission" }
+				}
+			}
+		},
+		"/api/admin/categories": {
+			"post": {
+				"summary": "Admin: create category",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Categories"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"slug": { "type": "string" },
+									"parentId": { "type": "string", "format": "uuid" }
+								},
+								"required": ["name", "slug"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Created" },
+					"403": { "description": "Forbidden - requires categories.manage permission" }
+				}
+			}
+		},
+		"/api/admin/categories/{id}": {
+			"put": {
+				"summary": "Admin: update category",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Categories"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires categories.manage permission" }
+				}
+			},
+			"delete": {
+				"summary": "Admin: delete category",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Categories"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires categories.manage permission" }
+				}
+			}
+		},
+		"/api/admin/categories/tree": {
+			"get": {
+				"summary": "Admin: get category tree",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Categories"],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires categories.manage permission" }
+				}
+			}
+		},
+		"/api/admin/users": {
+			"get": {
+				"summary": "Admin: list users with pagination, search and filters",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Users"],
+				"parameters": [
+					{
+						"name": "page",
+						"in": "query",
+						"schema": { "type": "integer", "default": 1 },
+						"description": "Page number"
+					},
+					{
+						"name": "pageSize",
+						"in": "query",
+						"schema": { "type": "integer", "default": 20 },
+						"description": "Number of items per page"
+					},
+					{
+						"name": "search",
+						"in": "query",
+						"schema": { "type": "string" },
+						"description": "Search in name, email, phone"
+					},
+					{
+						"name": "role",
+						"in": "query",
+						"schema": { "type": "string", "enum": ["user", "admin", "staff"] },
+						"description": "Filter by role"
+					},
+					{
+						"name": "isBlocked",
+						"in": "query",
+						"schema": { "type": "string", "enum": ["true", "false", ""] },
+						"description": "Filter by blocked status"
+					},
+					{
+						"name": "sortBy",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"enum": ["created_at", "name", "email", "role"],
+							"default": "created_at"
+						},
+						"description": "Sort field"
+					},
+					{
+						"name": "sortOrder",
+						"in": "query",
+						"schema": { "type": "string", "enum": ["ASC", "DESC"], "default": "DESC" },
+						"description": "Sort order"
+					}
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires users.view permission" }
+				}
+			}
+		},
+		"/api/admin/users/{id}/block": {
+			"put": {
+				"summary": "Admin: block/unblock user",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Users"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "blocked": { "type": "boolean" } },
+								"required": ["blocked"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires users.block permission" }
+				}
+			}
+		},
+		"/api/admin/users/{id}/orders": {
+			"get": {
+				"summary": "Admin: get user orders",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Users"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"403": { "description": "Forbidden - requires orders.view permission" }
+				}
+			}
+		},
+		"/api/admin/vouchers": {
+			"get": {
+				"summary": "Admin: list vouchers",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Vouchers"],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			},
+			"post": {
+				"summary": "Admin: create voucher",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Vouchers"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"code": { "type": "string" },
+									"description": { "type": "string" },
+									"discount_percent": { "type": "integer" },
+									"discount_amount": { "type": "number" },
+									"max_uses": { "type": "integer" },
+									"valid_from": { "type": "string", "format": "date-time" },
+									"valid_to": { "type": "string", "format": "date-time" },
+									"is_active": { "type": "boolean" }
+								},
+								"required": ["code"]
+							}
+						}
+					}
+				},
+				"responses": { "201": { "description": "Created" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/admin/vouchers/{id}": {
+			"put": {
+				"summary": "Admin: update voucher",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Vouchers"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			},
+			"delete": {
+				"summary": "Admin: delete voucher",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Vouchers"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": { "200": { "description": "OK" }, "403": { "description": "Forbidden" } }
+			}
+		},
+		"/api/resources": {
+			"get": {
+				"summary": "List purchased resources (auto-deleted after 30 days)",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["User Resources"],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer" } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer" } }
+				],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/resources/settings": {
+			"get": {
+				"summary": "Get public site settings (alternative endpoint)",
+				"tags": ["Public"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"success": { "type": "boolean" },
+										"message": { "type": "string" },
+										"settings": {
+											"type": "object",
+											"additionalProperties": true,
+											"example": {
+												"site_name": "My Shop",
+												"site_logo": "https://logo-url.com",
+												"site_banner": "https://banner-url.com",
+												"contact_email": "contact@shop.com",
+												"contact_phone": "0123456789",
+												"seo_title": "My Shop - Best Digital Products",
+												"seo_description": "Description for SEO",
+												"default_currency": "VND",
+												"maintenance_mode": false,
+												"allow_registration": true
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/payments/start": {
+			"post": {
+				"summary": "Start Sepay payment for existing order",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Payments"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"orderId": { "type": "string", "format": "uuid" },
+									"amount": { "type": "number" }
+								},
+								"required": ["orderId", "amount"]
+							}
+						}
+					}
+				},
+				"responses": { "201": { "description": "Created" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/payments/checkout": {
+			"post": {
+				"summary": "Checkout cart and create Sepay payment",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Payments"],
+				"responses": {
+					"201": { "description": "Created" },
+					"400": { "description": "Bad request" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/payments/webhook/sepay": {
+			"post": {
+				"summary": "Sepay webhook receiver",
+				"tags": ["Payments"],
+				"responses": {
+					"200": { "description": "OK" },
+					"400": { "description": "Bad request" },
+					"401": { "description": "Invalid signature" }
+				}
+			}
+		},
+		"/api/public/categories/tree": {
+			"get": {
+				"summary": "Public: get category tree",
+				"tags": ["Public"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"tree": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string" },
+													"slug": { "type": "string" },
+													"parent_id": { "type": "string", "format": "uuid" },
+													"children": {
+														"type": "array",
+														"items": { "$ref": "#/components/schemas/Category" }
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/public/faqs": {
+			"get": {
+				"summary": "Public: get FAQs",
+				"tags": ["Public"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"faqs": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "integer" },
+													"question": { "type": "string" },
+													"answer": { "type": "string" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/public/announcements": {
+			"get": {
+				"summary": "Public: get announcements",
+				"tags": ["Public"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"announcements": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "integer" },
+													"title": { "type": "string" },
+													"content": { "type": "string" },
+													"image": { "type": "string" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/cart": {
+			"get": {
+				"summary": "Get current user's cart",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Cart"],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/cart/add": {
+			"post": {
+				"summary": "Add item to cart",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Cart"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"productId": { "type": "string", "format": "uuid" },
+									"quantity": { "type": "integer", "minimum": 1 }
+								},
+								"required": ["productId", "quantity"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "OK" },
+					"400": { "description": "Bad request" },
+					"404": { "description": "Not found" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/cart/update": {
+			"put": {
+				"summary": "Update item quantity",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Cart"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"productId": { "type": "string", "format": "uuid" },
+									"quantity": { "type": "integer", "minimum": 1 }
+								},
+								"required": ["productId", "quantity"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/cart/remove": {
+			"post": {
+				"summary": "Remove item from cart",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Cart"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "productId": { "type": "string", "format": "uuid" } },
+								"required": ["productId"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/cart/clear": {
+			"post": {
+				"summary": "Clear the cart",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Cart"],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/orders/checkout": {
+			"post": {
+				"summary": "Checkout current cart into an order",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
+				"requestBody": {
+					"required": false,
+					"content": {
+						"application/json": {
+							"schema": { "type": "object", "properties": { "paymentMethod": { "type": "string" } } }
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Created" },
+					"400": { "description": "Bad request" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/orders": {
+			"get": {
+				"summary": "List user's orders",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
+				"parameters": [
+					{ "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } }
+				],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/orders/{id}": {
+			"get": {
+				"summary": "Get order detail",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Orders"],
+				"parameters": [
+					{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+				],
+				"responses": {
+					"200": { "description": "OK" },
+					"404": { "description": "Not found" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/products/categories": {
+			"get": {
+				"summary": "List categories",
+				"tags": ["Products"],
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/products": {
+			"get": {
+				"summary": "List products with filters",
+				"tags": ["Products"],
+				"parameters": [
+					{ "name": "q", "in": "query", "schema": { "type": "string" } },
+					{ "name": "categoryId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+					{ "name": "minPrice", "in": "query", "schema": { "type": "number" } },
+					{ "name": "maxPrice", "in": "query", "schema": { "type": "number" } },
+					{ "name": "inStock", "in": "query", "schema": { "type": "boolean" } },
+					{ "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1 } },
+					{ "name": "pageSize", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } }
+				],
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/products/{slug}": {
+			"get": {
+				"summary": "Get product detail by slug",
+				"tags": ["Products"],
+				"parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+				"responses": { "200": { "description": "OK" }, "404": { "description": "Not Found" } }
+			}
+		},
+		"/api/vouchers/apply": {
+			"post": {
+				"summary": "Apply voucher code",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Vouchers"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"code": { "type": "string", "example": "DISCOUNT10" },
+									"amount": { "type": "number", "example": 100000 }
+								},
+								"required": ["code", "amount"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Voucher applied successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"discountedAmount": { "type": "number" }
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Bad request" },
+					"404": { "description": "Voucher not found" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/security/2fa/enable": {
+			"post": {
+				"summary": "Enable 2FA for user",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Security"],
+				"responses": {
+					"200": {
+						"description": "2FA enabled successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"otpauth": { "type": "string" },
+										"qr": { "type": "string", "description": "Base64 QR code" }
+									}
+								}
+							}
+						}
+					},
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/security/2fa/disable": {
+			"post": {
+				"summary": "Disable 2FA for user",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Security"],
+				"responses": {
+					"200": { "description": "2FA disabled successfully" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/security/2fa/verify": {
+			"post": {
+				"summary": "Verify 2FA token",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Security"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"token": { "type": "string", "example": "123456" }
+								},
+								"required": ["token"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Token verification result",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"valid": { "type": "boolean" }
+									}
+								}
+							}
+						}
+					},
+					"400": { "description": "Bad request" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/health": {
+			"get": {
+				"summary": "Health check",
+				"tags": ["System"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": { "type": "object", "properties": { "status": { "type": "string" } } }
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/auth/register": {
+			"post": {
+				"summary": "Register new user",
+				"tags": ["Authentication"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"email": { "type": "string", "format": "email" },
+									"phone": { "type": "string" },
+									"password": { "type": "string" }
+								},
+								"required": ["email", "password"]
+							}
+						}
+					}
+				},
+				"responses": { "201": { "description": "Created" } }
+			}
+		},
+		"/api/auth/login": {
+			"post": {
+				"summary": "Login",
+				"tags": ["Authentication"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"email": { "type": "string", "format": "email" },
+									"password": { "type": "string" }
+								},
+								"required": ["email", "password"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/auth/logout": {
+			"post": {
+				"summary": "Logout (revoke refresh token)",
+				"tags": ["Authentication"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "refreshToken": { "type": "string" } },
+								"required": ["refreshToken"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/auth/refresh": {
+			"post": {
+				"summary": "Refresh access token",
+				"tags": ["Authentication"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "refreshToken": { "type": "string" } },
+								"required": ["refreshToken"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/auth/me": {
+			"get": {
+				"summary": "Get current user",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Authentication"],
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			},
+			"put": {
+				"summary": "Update profile",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Authentication"],
+				"requestBody": {
+					"required": false,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": { "type": "string" },
+									"phone": { "type": "string" },
+									"avatarUrl": { "type": "string" },
+									"email": { "type": "string", "format": "email" }
+								}
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/auth/change-password": {
+			"post": {
+				"summary": "Change password",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Authentication"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"currentPassword": { "type": "string" },
+									"newPassword": { "type": "string" }
+								},
+								"required": ["currentPassword", "newPassword"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" }, "401": { "description": "Unauthorized" } }
+			}
+		},
+		"/api/password/forgot": {
+			"post": {
+				"summary": "Request password reset",
+				"tags": ["Password Reset"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "email": { "type": "string", "format": "email" } },
+								"required": ["email"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/password/reset": {
+			"post": {
+				"summary": "Reset password",
+				"tags": ["Password Reset"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": { "token": { "type": "string" }, "newPassword": { "type": "string" } },
+								"required": ["token", "newPassword"]
+							}
+						}
+					}
+				},
+				"responses": { "200": { "description": "OK" } }
+			}
+		},
+		"/api/uploads/images": {
+			"post": {
+				"summary": "Upload single hoặc multiple images",
+				"description": "Upload 1 hoặc nhiều ảnh cùng lúc, tối đa 10 files, mỗi file tối đa 10MB",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["File Upload"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"files": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"format": "binary"
+										},
+										"description": "Các file ảnh cần upload (tối đa 10 files)"
+									},
+									"folder": {
+										"type": "string",
+										"description": "Thư mục con trong Cloudinary (optional)",
+										"example": "products"
+									}
+								},
+								"required": ["files"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Upload thành công" },
+					"400": { "description": "Bad request - No files hoặc validation error" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/uploads/avatar": {
+			"post": {
+				"summary": "Upload avatar cho user",
+				"description": "Upload avatar, tự động resize về 200x200px và crop theo khuôn mặt",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["File Upload"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"file": {
+										"type": "string",
+										"format": "binary",
+										"description": "File ảnh avatar"
+									}
+								},
+								"required": ["file"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Avatar upload thành công" },
+					"400": { "description": "Bad request - No file" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/uploads/product": {
+			"post": {
+				"summary": "Upload product images",
+				"description": "Upload ảnh sản phẩm, tối đa 5 files",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["File Upload"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"files": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"format": "binary"
+										},
+										"description": "Các file ảnh sản phẩm (tối đa 5 files)"
+									}
+								},
+								"required": ["files"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Product images upload thành công" },
+					"400": { "description": "Bad request - No files" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/uploads/announcement": {
+			"post": {
+				"summary": "Upload announcement image",
+				"description": "Upload ảnh thông báo, 1 file duy nhất",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["File Upload"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"file": {
+										"type": "string",
+										"format": "binary",
+										"description": "File ảnh thông báo"
+									}
+								},
+								"required": ["file"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Announcement image upload thành công" },
+					"400": { "description": "Bad request - No file" },
+					"401": { "description": "Unauthorized" }
+				}
+			}
+		},
+		"/api/admin/faqs": {
+			"post": {
+				"summary": "Admin: Create new FAQ",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin FAQ"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"question": { "type": "string", "example": "How to create an account?" },
+									"answer": { "type": "string", "example": "Click on the register button..." },
+									"is_active": { "type": "boolean", "default": true }
+								},
+								"required": ["question", "answer"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "FAQ created successfully" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/faqs/{id}": {
+			"put": {
+				"summary": "Admin: Update FAQ",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin FAQ"],
+				"parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"question": { "type": "string" },
+									"answer": { "type": "string" },
+									"is_active": { "type": "boolean" }
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "FAQ updated successfully" },
+					"403": { "description": "Admin access required" }
+				}
+			},
+			"delete": {
+				"summary": "Admin: Delete FAQ",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin FAQ"],
+				"parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+				"responses": {
+					"200": { "description": "FAQ deleted successfully" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/announcements": {
+			"get": {
+				"summary": "Admin: Get all announcements",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Announcements"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"announcements": {
+											"type": "array",
+											"items": { "$ref": "#/components/schemas/Announcement" }
+										}
+									}
+								}
+							}
+						}
+					},
+					"403": { "description": "Admin access required" }
+				}
+			},
+			"post": {
+				"summary": "Admin: Create new announcement",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Announcements"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"title": { "type": "string", "example": "System Maintenance Notice" },
+									"content": {
+										"type": "string",
+										"example": "The system will be down for maintenance..."
+									},
+									"image": {
+										"type": "string",
+										"example": "https://cloudinary.com/image/upload/announcement.jpg",
+										"description": "URL of the announcement image"
+									},
+									"is_active": { "type": "boolean", "default": true }
+								},
+								"required": ["title", "content"]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": { "description": "Announcement created successfully" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/admin/announcements/{id}": {
+			"put": {
+				"summary": "Admin: Update announcement",
+				"security": [{ "bearerAuth": [] }],
+				"tags": ["Admin Announcements"],
+				"parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"title": { "type": "string" },
+									"content": { "type": "string" },
+									"image": {
+										"type": "string",
+										"description": "URL of the announcement image"
+									},
+									"is_active": { "type": "boolean" }
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": { "description": "Announcement updated successfully" },
+					"403": { "description": "Admin access required" }
+				}
+			}
+		},
+		"/api/public/announcements": {
+			"get": {
+				"summary": "Public: get announcements",
+				"tags": ["Public"],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"message": { "type": "string" },
+										"announcements": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "integer" },
+													"title": { "type": "string" },
+													"content": { "type": "string" },
+													"image": { "type": "string" }
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/api/public/categories/slug/{slug}": {
+			"get": {
+				"summary": "Public: Get category by slug",
+				"tags": ["Public"],
+				"parameters": [
+					{
+						"name": "slug",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string" },
+						"description": "Category slug",
+						"example": "mua-tai-khoan"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Category retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"category": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"name": { "type": "string" },
+												"slug": { "type": "string" },
+												"parent_id": { "type": "string", "format": "uuid" },
+												"parent_name": { "type": "string" },
+												"parent_slug": { "type": "string" },
+												"product_count": { "type": "integer" },
+												"children": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"id": { "type": "string", "format": "uuid" },
+															"name": { "type": "string" },
+															"slug": { "type": "string" },
+															"parent_id": { "type": "string", "format": "uuid" }
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Category not found" },
+					"500": { "description": "Internal server error" }
+				}
+			}
+		},
+		"/api/public/categories/{id}": {
+			"get": {
+				"summary": "Public: Get category by ID",
+				"tags": ["Public"],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string", "format": "uuid" },
+						"description": "Category ID"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Category retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"category": {
+											"type": "object",
+											"properties": {
+												"id": { "type": "string", "format": "uuid" },
+												"name": { "type": "string" },
+												"slug": { "type": "string" },
+												"parent_id": { "type": "string", "format": "uuid" },
+												"parent_name": { "type": "string" },
+												"parent_slug": { "type": "string" },
+												"product_count": { "type": "integer" },
+												"children": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"id": { "type": "string", "format": "uuid" },
+															"name": { "type": "string" },
+															"slug": { "type": "string" },
+															"parent_id": { "type": "string", "format": "uuid" }
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Category not found" },
+					"500": { "description": "Internal server error" }
+				}
+			}
+		},
+		"/api/public/categories/{id}/products": {
+			"get": {
+				"summary": "Public: Get products by category ID",
+				"tags": ["Public"],
+				"parameters": [
+					{
+						"name": "id",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string", "format": "uuid" },
+						"description": "Category ID"
+					},
+					{
+						"name": "page",
+						"in": "query",
+						"schema": { "type": "integer", "default": 1, "minimum": 1 },
+						"description": "Page number"
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 },
+						"description": "Number of items per page"
+					},
+					{
+						"name": "sort",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"default": "created_at",
+							"enum": ["created_at", "name", "price"]
+						},
+						"description": "Sort field"
+					},
+					{
+						"name": "order",
+						"in": "query",
+						"schema": { "type": "string", "default": "desc", "enum": ["asc", "desc"] },
+						"description": "Sort order"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Products retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"products": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string" },
+													"slug": { "type": "string" },
+													"description": { "type": "string" },
+													"price": { "type": "number" },
+													"stock": { "type": "integer" },
+													"image_url": { "type": "string" },
+													"category_id": { "type": "string", "format": "uuid" },
+													"category_name": { "type": "string" },
+													"category_slug": { "type": "string" },
+													"is_active": { "type": "boolean" },
+													"created_at": { "type": "string", "format": "date-time" },
+													"updated_at": { "type": "string", "format": "date-time" }
+												}
+											}
+										},
+										"pagination": {
+											"type": "object",
+											"properties": {
+												"page": { "type": "integer" },
+												"limit": { "type": "integer" },
+												"total": { "type": "integer" },
+												"totalPages": { "type": "integer" },
+												"hasNext": { "type": "boolean" },
+												"hasPrev": { "type": "boolean" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Category not found" },
+					"500": { "description": "Internal server error" }
+				}
+			}
+		},
+		"/api/public/categories/slug/{slug}/products": {
+			"get": {
+				"summary": "Public: Get products by category slug",
+				"tags": ["Public"],
+				"parameters": [
+					{
+						"name": "slug",
+						"in": "path",
+						"required": true,
+						"schema": { "type": "string" },
+						"description": "Category slug",
+						"example": "mua-tai-khoan"
+					},
+					{
+						"name": "page",
+						"in": "query",
+						"schema": { "type": "integer", "default": 1, "minimum": 1 },
+						"description": "Page number"
+					},
+					{
+						"name": "limit",
+						"in": "query",
+						"schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 },
+						"description": "Number of items per page"
+					},
+					{
+						"name": "sort",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"default": "created_at",
+							"enum": ["created_at", "name", "price"]
+						},
+						"description": "Sort field"
+					},
+					{
+						"name": "order",
+						"in": "query",
+						"schema": { "type": "string", "default": "desc", "enum": ["asc", "desc"] },
+						"description": "Sort order"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Products retrieved successfully",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"products": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": { "type": "string", "format": "uuid" },
+													"name": { "type": "string" },
+													"slug": { "type": "string" },
+													"description": { "type": "string" },
+													"price": { "type": "number" },
+													"stock": { "type": "integer" },
+													"image_url": { "type": "string" },
+													"category_id": { "type": "string", "format": "uuid" },
+													"category_name": { "type": "string" },
+													"category_slug": { "type": "string" },
+													"is_active": { "type": "boolean" },
+													"created_at": { "type": "string", "format": "date-time" },
+													"updated_at": { "type": "string", "format": "date-time" }
+												}
+											}
+										},
+										"pagination": {
+											"type": "object",
+											"properties": {
+												"page": { "type": "integer" },
+												"limit": { "type": "integer" },
+												"total": { "type": "integer" },
+												"totalPages": { "type": "integer" },
+												"hasNext": { "type": "boolean" },
+												"hasPrev": { "type": "boolean" }
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": { "description": "Category not found" },
+					"500": { "description": "Internal server error" }
+				}
+			}
+		}
+	},
+	"components": {
+		"securitySchemes": {
+			"bearerAuth": {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT"
+			},
+			"apiKeyAuth": {
+				"type": "apiKey",
+				"in": "header",
+				"name": "Authorization",
+				"description": "API Key authentication for webhooks. Format: 'Apikey YOUR_API_KEY'"
+			}
+		},
+		"schemas": {
+			"Error": {
+				"type": "object",
+				"properties": {
+					"success": { "type": "boolean", "example": false },
+					"message": { "type": "string" },
+					"error": { "type": "string" }
+				}
+			},
+			"Success": {
+				"type": "object",
+				"properties": {
+					"success": { "type": "boolean", "example": true },
+					"message": { "type": "string" }
+				}
+			},
+			"Pagination": {
+				"type": "object",
+				"properties": {
+					"page": { "type": "integer" },
+					"pageSize": { "type": "integer" },
+					"total": { "type": "integer" },
+					"totalPages": { "type": "integer" },
+					"hasNext": { "type": "boolean" },
+					"hasPrev": { "type": "boolean" }
+				}
+			},
+			"User": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"name": { "type": "string" },
+					"email": { "type": "string", "format": "email" },
+					"phone": { "type": "string" },
+					"avatar_url": { "type": "string" },
+					"role": { "type": "string", "enum": ["user", "admin", "super", "staff"] },
+					"is_blocked": { "type": "boolean" },
+					"created_at": { "type": "string", "format": "date-time" },
+					"updated_at": { "type": "string", "format": "date-time" }
+				}
+			},
+			"Product": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"name": { "type": "string" },
+					"slug": { "type": "string" },
+					"description": { "type": "string" },
+					"price": { "type": "number" },
+					"stock": { "type": "integer" },
+					"image_url": { "type": "string" },
+					"category_id": { "type": "string", "format": "uuid" },
+					"is_active": { "type": "boolean" },
+					"created_at": { "type": "string", "format": "date-time" },
+					"updated_at": { "type": "string", "format": "date-time" }
+				}
+			},
+			"AdminRole": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"name": { "type": "string", "example": "product_manager" },
+					"display_name": { "type": "string", "example": "Product Manager" },
+					"description": { "type": "string" },
+					"is_active": { "type": "boolean" },
+					"permissions": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"name": { "type": "string" },
+								"display_name": { "type": "string" },
+								"module": { "type": "string" }
+							}
+						}
+					}
+				}
+			},
+			"Permission": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"name": { "type": "string", "example": "products.view" },
+					"display_name": { "type": "string", "example": "Xem sản phẩm" },
+					"description": { "type": "string" },
+					"module": { "type": "string", "example": "products" }
+				}
+			},
+			"Category": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"name": { "type": "string" },
+					"slug": { "type": "string" },
+					"parent_id": { "type": "string", "format": "uuid", "nullable": true },
+					"image": { "type": "string", "nullable": true },
+					"created_at": { "type": "string", "format": "date-time" },
+					"updated_at": { "type": "string", "format": "date-time" }
+				}
+			},
+			"FAQ": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "integer" },
+					"question": { "type": "string" },
+					"answer": { "type": "string" },
+					"is_active": { "type": "boolean" },
+					"created_at": { "type": "string", "format": "date-time" },
+					"updated_at": { "type": "string", "format": "date-time" }
+				}
+			},
+			"Announcement": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "integer" },
+					"title": { "type": "string" },
+					"content": { "type": "string" },
+					"image": { "type": "string" },
+					"is_active": { "type": "boolean" },
+					"created_at": { "type": "string", "format": "date-time" },
+					"updated_at": {
+						"type": "string",
+						"format": "date-time",
+						"description": "Available after migration"
+					}
+				}
+			}
+		}
+	},
+	"tags": [
+		{ "name": "Authentication", "description": "User authentication endpoints" },
+		{ "name": "Password Reset", "description": "Password reset functionality" },
+		{ "name": "Products", "description": "Public product endpoints" },
+		{ "name": "Cart", "description": "Shopping cart management" },
+		{ "name": "Orders", "description": "Order management" },
+		{ "name": "Admin Orders", "description": "Admin order management" },
+		{ "name": "Payments", "description": "Payment processing" },
+		{ "name": "Vouchers", "description": "Voucher/coupon system" },
+		{ "name": "Security", "description": "2FA and security features" },
+		{ "name": "User Resources", "description": "User purchased resources" },
+		{ "name": "File Upload", "description": "File upload endpoints" },
+		{ "name": "Public", "description": "Public endpoints (no auth)" },
+		{ "name": "System", "description": "System health and status" },
+		{ "name": "Admin Management", "description": "Admin user management with roles" },
+		{ "name": "Roles & Permissions", "description": "Role and permission management" },
+		{ "name": "Site Settings", "description": "Website configuration" },
+		{ "name": "Admin Products", "description": "Admin product management" },
+		{ "name": "Admin Categories", "description": "Admin category management" },
+		{ "name": "Admin Users", "description": "Admin user management" },
+		{ "name": "Admin Vouchers", "description": "Admin voucher management" },
+		{ "name": "Admin FAQ", "description": "Admin FAQ management" },
+		{ "name": "Admin Announcements", "description": "Admin announcements management" },
+		{ "name": "Wallet", "description": "User wallet functionality" },
+		{ "name": "Admin Wallet", "description": "Admin wallet management" }
+	]
+}
