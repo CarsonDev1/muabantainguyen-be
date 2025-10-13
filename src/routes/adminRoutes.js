@@ -38,6 +38,14 @@ import { getAllSettingsController, updateSettingsController } from '../controlle
 
 import { requirePermission } from '../middleware/permissionMiddleware.js';
 import { parseBulkInventoryText } from '../utils/inventoryHelpers.js';
+import {
+	createInventoryItem,
+	getExpiringSoon,
+	getStats,
+	importInventoryItems,
+	listInventory,
+	removeInventoryItem,
+} from '../services/inventoryService.js';
 
 const router = express.Router();
 
