@@ -37,6 +37,7 @@ import {
 import { getAllSettingsController, updateSettingsController } from '../controllers/siteSettingsController.js';
 
 import { requirePermission } from '../middleware/permissionMiddleware.js';
+import { parseBulkInventoryText } from '../utils/inventoryHelpers.js';
 
 const router = express.Router();
 
