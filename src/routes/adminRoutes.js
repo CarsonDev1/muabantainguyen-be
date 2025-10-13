@@ -46,6 +46,7 @@ import {
 	listInventory,
 	removeInventoryItem,
 } from '../services/inventoryService.js';
+import { syncAllProductStocks, syncProductStock } from '../services/stockSyncService.js';
 
 const router = express.Router();
 
@@ -350,7 +351,6 @@ router.delete('/inventory/:itemId', adminOnly, async (req, res) => {
  */
 router.post('/inventory/sync-stock', adminOnly, async (req, res) => {
 	try {
-		const { syncAllProductStocks } = await import('../services/stockSyncService.js');
 		const products = await syncAllProductStocks();
 
 		res.json({
