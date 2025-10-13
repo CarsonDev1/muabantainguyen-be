@@ -222,6 +222,7 @@ router.post('/inventory', adminOnly, async (req, res) => {
 	try {
 		const { productId, secretData, notes, accountExpiresAt, costPrice, source } = req.body;
 
+		// Validate required fields
 		if (!productId || !secretData) {
 			return res.status(400).json({
 				success: false,
@@ -229,11 +230,12 @@ router.post('/inventory', adminOnly, async (req, res) => {
 			});
 		}
 
+		// Create inventory item
 		const item = await createInventoryItem({
 			productId,
 			secretData,
-			notes,
-			accountExpiresAt,
+			notes: notes || null,
+			accountExpiresAt: accountExpiresAt || null,
 			costPrice: parseFloat(costPrice) || 0,
 			source: source || 'admin_manual',
 		});

@@ -14,13 +14,10 @@ function generateBatchId() {
 
 /**
  * Parse bulk inventory text
- * Format: Each item separated by "---" or double newline
  */
 function parseBulkInventoryText(text) {
-	// Try "---" separator first
 	let items = text.split(/\n---\n/).filter((item) => item.trim());
 
-	// If only 1 item, try double newline separator
 	if (items.length === 1) {
 		items = text.split(/\n\n+/).filter((item) => item.trim());
 	}
@@ -48,21 +45,6 @@ function validateSecretData(data) {
 }
 
 /**
- * Format inventory data for display
- */
-function formatInventoryData(data, maskSensitive = true) {
-	if (!maskSensitive) {
-		return data;
-	}
-
-	// Mask passwords and sensitive info
-	return data
-		.replace(/password:\s*\S+/gi, 'Password: ********')
-		.replace(/pass:\s*\S+/gi, 'Pass: ********')
-		.replace(/pwd:\s*\S+/gi, 'Pwd: ********');
-}
-
-/**
  * Calculate days until expiry
  */
 function getDaysUntilExpiry(expiresAt) {
@@ -76,4 +58,4 @@ function getDaysUntilExpiry(expiresAt) {
 	return diffDays;
 }
 
-export { generateBatchId, parseBulkInventoryText, validateSecretData, formatInventoryData, getDaysUntilExpiry };
+export { generateBatchId, parseBulkInventoryText, validateSecretData, getDaysUntilExpiry };

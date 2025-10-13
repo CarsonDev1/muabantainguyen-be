@@ -4,7 +4,6 @@ import { pool } from '../setup/db.js';
 
 /**
  * Sync product stock with available inventory
- * This should be called periodically or after inventory changes
  */
 async function syncAllProductStocks() {
 	try {
