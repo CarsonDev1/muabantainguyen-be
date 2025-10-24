@@ -2,6 +2,7 @@
 
 import dotenv from 'dotenv';
 dotenv.config();
+
 import express from 'express';
 import morgan from 'morgan';
 import helmet from 'helmet';
@@ -13,6 +14,8 @@ import { fileURLToPath } from 'url';
 import { activityLogger } from './middleware/activityLogger.js';
 import cors from 'cors';
 import cron from 'node-cron';
+import rateLimit from 'express-rate-limit';
+import slowDown from 'express-slow-down';
 
 import { pool } from './setup/db.js';
 import { initDatabase } from './setup/init.js';
@@ -33,6 +36,39 @@ import { cleanupExpiredDeliveries } from './models/deliveryModel.js';
 
 const app = express();
 
+// *** CHỐNG DDOS/SPAM – GLOBAL CONFIG ***
+app.set('trust proxy', 1); // bắt buộc khi chạy sau Nginx
+
+const apiLimiter = rateLimit({
+	windowMs: 60 * 1000,
+	max: 300,
+	standardHeaders: true,
+	legacyHeaders: false,
+	message: { error: 'Too many requests. Please try again later.' },
+});
+
+const speedLimiter = slowDown({
+	windowMs: 60 * 1000,
+	delayAfter: 120,
+	delayMs: () => 250, // NEW behavior for express-slow-down v2
+});
+
+// Rate limit cho login
+const loginLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000,
+	max: 20,
+	message: { error: 'Too many login attempts. Try again later.' },
+});
+
+// *** SECURITY HEADERS ***
+app.use(
+	helmet({
+		crossOriginResourcePolicy: { policy: 'cross-origin' },
+		crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+	})
+);
+
+// *** CORS ***
 const corsOptions = {
 	origin: [
 		'http://localhost:3000',
@@ -56,25 +92,28 @@ const corsOptions = {
 	exposedHeaders: ['Content-Range', 'X-Content-Range'],
 	maxAge: 600,
 };
-
-app.use(
-	helmet({
-		crossOriginResourcePolicy: { policy: 'cross-origin' },
-		crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
-	})
-);
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
-app.use(express.json());
+app.options('*', cors(corsOptions));
+
+// *** BODY PROTECTION ***
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// *** BASE MIDDLEWARE ***
 app.use(cookieParser());
-app.use(morgan('dev'));
+app.use(morgan('combined'));
 app.use(activityLogger);
 
-app.get('/api/health', (req, res) => {
-	res.json({ status: 'ok' });
+// *** HEALTH CHECK FOR DOCKER ***
+app.get('/api/health', (_req, res) => {
+	return res.status(200).json({ ok: true });
 });
 
-app.use('/api/auth', authRoutes);
+// *** APPLY PROTECTION FOR ALL API ***
+app.use('/api', speedLimiter, apiLimiter); // chống spam global
+
+// *** ROUTES ***
+app.use('/api/auth', loginLimiter, authRoutes); // login limiter
 app.use('/api/password', passwordResetRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
@@ -88,10 +127,11 @@ app.use('/api/vouchers', voucherRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/wallet', walletRoutes);
 
-// Swagger UI and raw spec
+// *** SWAGGER DOCS ***
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const openapiPath = path.join(__dirname, 'docs', 'openapi.json');
+
 app.get('/api-docs.json', (req, res) => {
 	try {
 		const openapiDoc = JSON.parse(fs.readFileSync(openapiPath, 'utf8'));
@@ -100,16 +140,15 @@ app.get('/api-docs.json', (req, res) => {
 		res.status(500).json({ message: 'Failed to load OpenAPI spec', error: e.message });
 	}
 });
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(undefined, { swaggerUrl: '/api-docs.json' }));
 
+// *** SERVER START ***
 const port = process.env.PORT || 4000;
-
 app.listen(port, async () => {
 	try {
-		// Probe the DB on startup
 		await pool.query('SELECT 1');
-		// Ensure schema exists without manual migration
-		// await // initDatabase();;
+		// await initDatabase();
 		console.log(`[server] Listening on port ${port}`);
 	} catch (err) {
 		console.error('[server] Database connection failed:', err.message);
@@ -117,7 +156,7 @@ app.listen(port, async () => {
 	}
 });
 
-// Run cleanup every day at 2 AM
+// *** CRON JOB ***
 cron.schedule('0 2 * * *', async () => {
 	console.log('[cron] Running expired deliveries cleanup...');
 	try {
