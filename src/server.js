@@ -102,7 +102,7 @@ app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 // *** BASE MIDDLEWARE ***
 app.use(cookieParser());
 app.use(morgan('combined'));
-app.use(activityLogger);
+// app.use(activityLogger);
 
 // *** HEALTH CHECK FOR DOCKER ***
 app.get('/api/health', (_req, res) => {
@@ -113,9 +113,9 @@ app.get('/api/health', (_req, res) => {
 app.use('/api', speedLimiter, apiLimiter); // chống spam global
 
 // *** ROUTES ***
-app.use('/api/auth', loginLimiter, authRoutes); // login limiter
+app.use('/api/auth', speedLimiter, apiLimiter, loginLimiter, authRoutes);
+app.use('/api/products', speedLimiter, apiLimiter, productRoutes);
 app.use('/api/password', passwordResetRoutes);
-app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
@@ -132,13 +132,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const openapiPath = path.join(__dirname, 'docs', 'openapi.json');
 
+let cachedSpec = null;
 app.get('/api-docs.json', (req, res) => {
-	try {
-		const openapiDoc = JSON.parse(fs.readFileSync(openapiPath, 'utf8'));
-		res.json(openapiDoc);
-	} catch (e) {
-		res.status(500).json({ message: 'Failed to load OpenAPI spec', error: e.message });
+	if (!cachedSpec) {
+		cachedSpec = JSON.parse(fs.readFileSync(openapiPath, 'utf8'));
 	}
+	res.json(cachedSpec);
 });
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(undefined, { swaggerUrl: '/api-docs.json' }));
