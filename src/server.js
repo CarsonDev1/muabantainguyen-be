@@ -11,13 +11,12 @@ import swaggerUi from 'swagger-ui-express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { activityLogger } from './middleware/activityLogger.js';
 import cors from 'cors';
 import cron from 'node-cron';
 import rateLimit from 'express-rate-limit';
 import slowDown from 'express-slow-down';
 
-import { pool } from './setup/db.js';
+import { pool, probeDatabase } from './setup/db.js';
 import { initDatabase } from './setup/init.js';
 import authRoutes from './routes/authRoutes.js';
 import passwordResetRoutes from './routes/passwordResetRoutes.js';
@@ -105,8 +104,10 @@ app.use(morgan('combined'));
 // app.use(activityLogger);
 
 // *** HEALTH CHECK FOR DOCKER ***
-app.get('/api/health', (_req, res) => {
-	return res.status(200).json({ ok: true });
+app.get('/api/health', async (_req, res) => {
+	const db = await probeDatabase();
+	const status = db.ok ? 200 : 503;
+	return res.status(status).json({ ok: true, db: db.ok ? 'up' : 'down', error: db.ok ? undefined : db.error });
 });
 
 // *** APPLY PROTECTION FOR ALL API ***
