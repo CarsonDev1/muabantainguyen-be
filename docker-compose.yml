@@ -1,12 +1,24 @@
 version: '3.8'
 
 services:
+    db:
+        image: postgres:15-alpine
+        environment:
+            - POSTGRES_DB=muabantainguyen
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=123
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        restart: unless-stopped
+        networks:
+            - app-network
+
     app:
         build: .
         ports:
             - '4000:4000'
         environment:
-            - PGHOST=host.docker.internal
+            - PGHOST=db
             - PGPORT=5432
             - PGDATABASE=muabantainguyen
             - PGUSER=postgres
@@ -18,6 +30,8 @@ services:
         restart: unless-stopped
         extra_hosts:
             - 'host.docker.internal:host-gateway'
+        depends_on:
+            - db
         networks:
             - app-network
 
@@ -38,3 +52,6 @@ services:
 networks:
     app-network:
         driver: bridge
+
+volumes:
+    pgdata:
