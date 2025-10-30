@@ -24,7 +24,7 @@ BEGIN
       p_reference_type text,
       p_reference_id text,
       p_provider text
-    ) RETURNS uuid AS $$
+    ) RETURNS uuid AS $fn$
     DECLARE
       v_balance_before numeric;
       v_balance_after numeric;
@@ -62,7 +62,7 @@ BEGIN
 
       RETURN v_tx_id;
     END;
-    $$ LANGUAGE plpgsql;
+    $fn$ LANGUAGE plpgsql;
   END IF;
 END$$;
 `;
