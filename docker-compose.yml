@@ -7,8 +7,12 @@ services:
             - POSTGRES_DB=muabantainguyen
             - POSTGRES_USER=postgres
             - POSTGRES_PASSWORD=123
+            - POSTGRES_HOST_AUTH_METHOD=md5
+        command: ['postgres', '-c', 'listen_addresses=*', '-c', 'max_connections=200']
         volumes:
             - pgdata:/var/lib/postgresql/data
+        ports:
+            - '5432:5432'
         restart: unless-stopped
         networks:
             - app-network
