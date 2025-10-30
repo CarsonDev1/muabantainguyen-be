@@ -148,7 +148,7 @@ const port = process.env.PORT || 4000;
 app.listen(port, async () => {
 	try {
 		await pool.query('SELECT 1');
-		// await initDatabase();
+		await initDatabase();
 		console.log(`[server] Listening on port ${port}`);
 	} catch (err) {
 		console.error('[server] Database connection failed:', err.message);
